@@ -1,2 +1,18 @@
-<h1>Welcome to SvelteKit</h1>
-<p>Visit <a href="https://svelte.dev/docs/kit">svelte.dev/docs/kit</a> to read the documentation</p>
+<script lang="ts">
+	import ThreeScene from '$lib/components/ThreeScene.svelte';
+</script>
+
+<main>
+	<ThreeScene />
+	<div class="hud">🎮 Sterowanie: W A S D</div>
+</main>
+
+<style>
+	.hud {
+		position: absolute;
+		top: 1rem;
+		left: 1rem;
+		color: white;
+		font-family: sans-serif;
+	}
+</style>
