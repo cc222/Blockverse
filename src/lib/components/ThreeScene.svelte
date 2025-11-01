@@ -20,9 +20,9 @@
 		stats.dom.style.top = '0';
 		stats.dom.style.zIndex = '9999';
 
-		if (terrain && typeof terrain.dispose === 'function') {
-			terrainDispose = () => terrain.dispose();
-		}
+		// if (terrain && typeof terrain.dispose === 'function') {
+		// 	terrainDispose = () => terrain.dispose();
+		// }
 
 		let prevTime = performance.now();
 
@@ -41,13 +41,13 @@
 
 		return () => {
 			// cleanup (svelte onDestroy also called)
-			terrainDispose && terrainDispose();
+			//terrainDispose && terrainDispose();
 			renderer.dispose();
 		};
 	});
 
 	onDestroy(() => {
-		terrainDispose && terrainDispose();
+		//terrainDispose && terrainDispose();
 	});
 </script>
 

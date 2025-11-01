@@ -1,176 +1,111 @@
 // src/game/terrain.ts
-import * as THREE from 'three';
+import { Block } from './blocks';
 import { Perlin } from './perlin';
 
-export type BlockType = 'air' | 'grass' | 'dirt' | 'stone' | 'sand' | 'water';
+export class TerrainGenerator {
+	width: number;
+	depth: number;
+	height: number;
+	seed: number;
+	scale: number;
+	waterLevel: number;
+	caveThreshold: number;
+	voxels: Uint8Array;
+	perlin: Perlin;
 
-export interface TerrainOptions {
-	width: number; // liczba bloków w osi X
-	depth: number; // liczba bloków w osi Z
-	maxHeight: number; // maksymalna wysokość w blokach
-	scale?: number; // skalowanie perlin noise
-	seed?: number;
-	blockSize?: number;
-	waterLevel?: number;
-	caveThreshold?: number; // 0..1, mniejsza -> więcej jaskiń
-}
-
-export function generateTerrainInstanced(scene: THREE.Scene, options: TerrainOptions) {
-	const {
+	constructor({
 		width,
 		depth,
-		maxHeight,
-		scale = 30,
+		height,
+		scale = 40,
 		seed = 0,
-		blockSize = 1,
-		waterLevel = Math.floor(maxHeight * 0.3),
+		waterLevel = Math.floor(height * 0.3),
 		caveThreshold = 0.55
-	} = options;
+	}: {
+		width: number;
+		depth: number;
+		height: number;
+		scale?: number;
+		seed?: number;
+		waterLevel?: number;
+		caveThreshold?: number;
+	}) {
+		this.width = width;
+		this.depth = depth;
+		this.height = height;
+		this.scale = scale;
+		this.seed = seed;
+		this.waterLevel = waterLevel;
+		this.caveThreshold = caveThreshold;
+		this.perlin = new Perlin(seed);
+		this.voxels = new Uint8Array(width * height * depth);
+	}
 
-	const perlin = new Perlin(seed);
+	index(x: number, y: number, z: number): number {
+		return x + y * this.width + z * this.width * this.height;
+	}
 
-	// Prepare materials for different block types (simple colors)
-	const matGrass = new THREE.MeshStandardMaterial({ color: 0x4caf50 });
-	const matDirt = new THREE.MeshStandardMaterial({ color: 0x8b5a2b });
-	const matStone = new THREE.MeshStandardMaterial({ color: 0x888888 });
-	const matSand = new THREE.MeshStandardMaterial({ color: 0xf4e7a1 });
-	const matWater = new THREE.MeshStandardMaterial({
-		color: 0x3ea6ff,
-		transparent: true,
-		opacity: 0.6
-	});
-
-	// We'll create separate InstancedMesh per material (keeps GPU state clean)
-	const boxGeo = new THREE.BoxGeometry(blockSize, blockSize, blockSize);
-
-	const instancedMap: Record<string, THREE.InstancedMesh> = {};
-	const mats = {
-		grass: matGrass,
-		dirt: matDirt,
-		stone: matStone,
-		sand: matSand,
-		water: matWater
-	};
-
-	// pre-alloc arrays storing transforms for each type
-	const transforms: Record<string, THREE.Matrix4[]> = {
-		grass: [],
-		dirt: [],
-		stone: [],
-		sand: [],
-		water: []
-	};
-
-	// Generate heightmap + caves
-	function heightAt(x: number, z: number) {
-		// Combine octaves of Perlin for better terrain
-		let n = 0;
-		let amp = 1;
-		let freq = 1;
-		let max = 0;
-		for (let o = 0; o < 5; o++) {
-			n += perlin.noise((x / scale) * freq, (z / scale) * freq) * amp;
+	private heightAt(x: number, z: number): number {
+		let n = 0,
+			amp = 1,
+			freq = 1,
+			max = 0;
+		for (let o = 0; o < 4; o++) {
+			n += this.perlin.noise((x / this.scale) * freq, (z / this.scale) * freq) * amp;
 			max += amp;
 			amp *= 0.5;
 			freq *= 2;
 		}
-		n /= max;
-		// stretch and map to [0, maxHeight]
-		return Math.floor(n * maxHeight);
+		return Math.floor((n / max) * this.height);
 	}
 
-	function caveAt(x: number, y: number, z: number) {
-		// 3D noise for caves
-		let n = 0;
-		let amp = 1;
-		let freq = 1;
-		let max = 0;
+	private caveAt(x: number, y: number, z: number): number {
+		let n = 0,
+			amp = 1,
+			freq = 1,
+			max = 0;
 		for (let o = 0; o < 3; o++) {
 			n +=
-				perlin.noise((x / (scale / 2)) * freq, (y / (scale / 2)) * freq, (z / (scale / 2)) * freq) *
-				amp;
+				this.perlin.noise(
+					(x / (this.scale / 2)) * freq,
+					(y / (this.scale / 2)) * freq,
+					(z / (this.scale / 2)) * freq
+				) * amp;
 			max += amp;
 			amp *= 0.5;
 			freq *= 2;
 		}
-		n /= max;
-		return n;
+		return n / max;
 	}
 
-	// iterate grid
-	for (let ix = 0; ix < width; ix++) {
-		for (let iz = 0; iz < depth; iz++) {
-			const hx = heightAt(ix, iz);
+	generate(): Uint8Array {
+		const { width, depth, height, waterLevel, caveThreshold } = this;
 
-			// create column from 0..hx
-			for (let y = 0; y <= hx; y++) {
-				// apply cave cutout
-				const caveVal = caveAt(ix, y, iz);
-				if (caveVal > caveThreshold) continue; // carve cave
+		for (let x = 0; x < width; x++) {
+			for (let z = 0; z < depth; z++) {
+				const h = this.heightAt(x, z);
+				for (let y = 0; y < height; y++) {
+					let id = Block.toId('air');
+					const caveNoise = this.caveAt(x, y, z);
+					if (caveNoise > caveThreshold) {
+						id = Block.toId('air');
+					} else if (y <= h) {
+						if (y === h) {
+							id = y <= waterLevel ? Block.toId('sand') : Block.toId('grass');
+						} else if (y > h - 3) {
+							id = Block.toId('dirt');
+						} else {
+							id = Block.toId('stone');
+						}
+					} else if (y <= waterLevel) {
+						id = Block.toId('water');
+					}
 
-				let type: BlockType = 'dirt';
-				if (y === hx) {
-					// topmost block
-					type = y <= waterLevel - 1 ? 'sand' : 'grass';
-				} else if (y > hx - 4) {
-					type = 'dirt';
-				} else {
-					type = 'stone';
+					this.voxels[this.index(x, y, z)] = id;
 				}
-
-				// If below water level, fill with water above blocks as water instanced
-				const worldX = (ix - width / 2) * blockSize;
-				const worldZ = (iz - depth / 2) * blockSize;
-				const worldY = y * blockSize + blockSize / 2;
-
-				const m = new THREE.Matrix4().makeTranslation(worldX, worldY, worldZ);
-				if (type === 'grass') transforms.grass.push(m);
-				else if (type === 'dirt') transforms.dirt.push(m);
-				else if (type === 'stone') transforms.stone.push(m);
-				else if (type === 'sand') transforms.sand.push(m);
-			}
-
-			// water plane: create water blocks up to waterLevel if hx < waterLevel
-			for (let y = hx + 1; y <= waterLevel; y++) {
-				const worldX = (ix - width / 2) * blockSize;
-				const worldZ = (iz - depth / 2) * blockSize;
-				const worldY = y * blockSize + blockSize / 2;
-				const m = new THREE.Matrix4().makeTranslation(worldX, worldY, worldZ);
-				transforms.water.push(m);
 			}
 		}
+
+		return this.voxels;
 	}
-
-	// Create InstancedMesh for each type with at least number of instances required
-	Object.keys(transforms).forEach((key) => {
-		const arr = transforms[key];
-		if (arr.length === 0) return;
-		const material = (mats as Record<string, THREE.Material>)[key];
-		const inst = new THREE.InstancedMesh(boxGeo, material, arr.length);
-		inst.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-		for (let i = 0; i < arr.length; i++) {
-			inst.setMatrixAt(i, arr[i]);
-		}
-		// optional: cast/receive shadows
-		inst.castShadow = key !== 'water';
-		inst.receiveShadow = true;
-		scene.add(inst);
-		(instancedMap as Record<string, THREE.InstancedMesh>)[key] = inst;
-	});
-
-	// Return helper to dispose later
-	return {
-		instancedMap,
-		dispose() {
-			Object.values(instancedMap).forEach((inst) => {
-				inst.geometry.dispose();
-				if (Array.isArray(inst.material)) {
-					inst.material.forEach((m) => m.dispose());
-				} else {
-					inst.material.dispose();
-				}
-				scene.remove(inst);
-			});
-		}
-	};
 }

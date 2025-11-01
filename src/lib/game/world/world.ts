@@ -1,59 +1,48 @@
 // src/game/world.ts
 import * as THREE from 'three';
-import { generateTerrainInstanced } from './terrain';
+import { TerrainGenerator } from './terrain';
+import { Mesher } from './mesher';
 
 export function createWorld(canvas: HTMLCanvasElement) {
 	const scene = new THREE.Scene();
-	scene.fog = new THREE.FogExp2(0x202025, 0.02);
 	scene.background = new THREE.Color(0x87ceeb);
+	scene.fog = new THREE.FogExp2(0x202020, 0.02);
 
 	const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-	camera.position.set(0, 10, 20);
+	camera.position.set(0, 20, 30);
 
 	const renderer = new THREE.WebGLRenderer({ canvas });
 	renderer.setSize(window.innerWidth, window.innerHeight);
 	renderer.shadowMap.enabled = true;
-	renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 	const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.8);
-	hemi.position.set(0, 50, 0);
 	scene.add(hemi);
 
 	const dir = new THREE.DirectionalLight(0xffffff, 0.8);
-	dir.position.set(-10, 40, 10);
+	dir.position.set(-20, 40, 20);
 	dir.castShadow = true;
-	dir.shadow.mapSize.width = 2048;
-	dir.shadow.mapSize.height = 2048;
-	dir.shadow.camera.left = -50;
-	dir.shadow.camera.right = 50;
-	dir.shadow.camera.top = 50;
-	dir.shadow.camera.bottom = -50;
 	scene.add(dir);
 
-	// generate terrain
-	const terrain = generateTerrainInstanced(scene, {
-		width: 80, // blocks X
-		depth: 80, // blocks Z
-		maxHeight: 24,
-		scale: 50,
-		seed: Math.floor(Math.random() * 10000),
-		blockSize: 1,
+	// 🚀 Generate terrain data
+	const terrain = new TerrainGenerator({
+		width: 800,
+		depth: 800,
+		height: 100,
+		seed: Math.random() * 10000,
 		waterLevel: 6,
 		caveThreshold: 0.58
 	});
 
-	// small helper grid (optional)
-	const grid = new THREE.GridHelper(200, 200, 0x000000, 0x000000);
-	grid.material.opacity = 0.08;
-	grid.material.transparent = true;
-	scene.add(grid);
+	const voxels = terrain.generate();
 
-	// resize handling
+	// 🧱 Build mesh
+	const meshGroup = Mesher.build(scene, voxels, terrain.width, terrain.height, terrain.depth);
+
 	window.addEventListener('resize', () => {
 		camera.aspect = window.innerWidth / window.innerHeight;
 		camera.updateProjectionMatrix();
 		renderer.setSize(window.innerWidth, window.innerHeight);
 	});
 
-	return { scene, camera, renderer, terrain };
+	return { scene, camera, renderer, terrain, meshGroup };
 }
