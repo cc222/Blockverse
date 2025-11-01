@@ -8,8 +8,12 @@ export class Mesher {
 		voxels: Uint8Array,
 		width: number,
 		height: number,
-		depth: number
+		depth: number,
+		cx = 0,
+		cy = 0,
+		cz = 0
 	) {
+		const chunkOffset = new THREE.Vector3(cx * width, cy * height, cz * depth);
 		const dirs = [
 			[1, 0, 0],
 			[-1, 0, 0],
@@ -94,9 +98,9 @@ export class Mesher {
 								const n = new THREE.Vector3(dx, dy, dz);
 								for (const p of vtx) {
 									verts.push(
-										(p[0] + x - width / 2) * blockSize,
-										(p[1] + y) * blockSize,
-										(p[2] + z - depth / 2) * blockSize
+										(p[0] + x + chunkOffset.x - width / 2) * blockSize,
+										(p[1] + y + chunkOffset.y) * blockSize,
+										(p[2] + z + chunkOffset.z - depth / 2) * blockSize
 									);
 									norms.push(n.x, n.y, n.z);
 								}

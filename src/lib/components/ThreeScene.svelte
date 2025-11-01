@@ -10,7 +10,7 @@
 	let stats: Stats;
 
 	onMount(() => {
-		const { scene, camera, renderer, terrain } = createWorld(canvas);
+		const { scene, camera, renderer } = createWorld(canvas);
 		controls = new FPSControls(camera, renderer.domElement);
 		stats = new Stats();
 		stats.showPanel(0); // 0 = FPS

@@ -1,7 +1,7 @@
 // src/game/world.ts
 import * as THREE from 'three';
 import { TerrainGenerator } from './terrain';
-import { Mesher } from './mesher';
+import { WorldChunkManager } from './chunk';
 
 export function createWorld(canvas: HTMLCanvasElement) {
 	const scene = new THREE.Scene();
@@ -9,7 +9,7 @@ export function createWorld(canvas: HTMLCanvasElement) {
 	scene.fog = new THREE.FogExp2(0x202020, 0.02);
 
 	const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-	camera.position.set(0, 20, 30);
+	camera.position.set(0, 30, 0);
 
 	const renderer = new THREE.WebGLRenderer({ canvas });
 	renderer.setSize(window.innerWidth, window.innerHeight);
@@ -23,26 +23,25 @@ export function createWorld(canvas: HTMLCanvasElement) {
 	dir.castShadow = true;
 	scene.add(dir);
 
-	// 🚀 Generate terrain data
-	const terrain = new TerrainGenerator({
-		width: 800,
-		depth: 800,
-		height: 100,
+	// 🌍 generator i menedżer chunków
+	const generator = new TerrainGenerator({
+		width: 16,
+		depth: 16,
+		height: 64,
 		seed: Math.random() * 10000,
-		waterLevel: 6,
-		caveThreshold: 0.58
+		waterLevel: 20,
+		caveThreshold: 0.57
 	});
 
-	const voxels = terrain.generate();
+	const chunks = new WorldChunkManager(scene, generator);
 
-	// 🧱 Build mesh
-	const meshGroup = Mesher.build(scene, voxels, terrain.width, terrain.height, terrain.depth);
+	function animate() {
+		requestAnimationFrame(animate);
+		chunks.update(camera.position);
+		renderer.render(scene, camera);
+	}
 
-	window.addEventListener('resize', () => {
-		camera.aspect = window.innerWidth / window.innerHeight;
-		camera.updateProjectionMatrix();
-		renderer.setSize(window.innerWidth, window.innerHeight);
-	});
+	animate();
 
-	return { scene, camera, renderer, terrain, meshGroup };
+	return { scene, camera, renderer, chunks };
 }

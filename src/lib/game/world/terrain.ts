@@ -1,6 +1,7 @@
 // src/game/terrain.ts
 import { Block } from './blocks';
 import { Perlin } from './perlin';
+import { BIOMES, type Biom } from './biomes';
 
 export class TerrainGenerator {
 	width: number;
@@ -10,7 +11,6 @@ export class TerrainGenerator {
 	scale: number;
 	waterLevel: number;
 	caveThreshold: number;
-	voxels: Uint8Array;
 	perlin: Perlin;
 
 	constructor({
@@ -38,25 +38,47 @@ export class TerrainGenerator {
 		this.waterLevel = waterLevel;
 		this.caveThreshold = caveThreshold;
 		this.perlin = new Perlin(seed);
-		this.voxels = new Uint8Array(width * height * depth);
 	}
 
-	index(x: number, y: number, z: number): number {
-		return x + y * this.width + z * this.width * this.height;
+	/** --- BIOM selection based on 2D Perlin noise --- */
+	biomeAt(x: number, z: number): Biom {
+		// 🔧 używamy szumu -1..1 zamiast 0..1
+		const temp = this.perlin.noise(x / 400, z / 400) * 2 - 1;
+		const humid = this.perlin.noise((x + 10000) / 400, (z + 10000) / 400) * 2 - 1;
+		const value = (temp + humid) / 2; // mieszanina
+
+		// 👇 rozdzielamy biomy po kwadracie (temperatura/wilgotność)
+		if (temp < -0.3) {
+			if (humid < 0) return BIOMES.find((b) => b.name === 'snow')!;
+			return BIOMES.find((b) => b.name === 'mountains')!;
+		} else if (temp < 0.3) {
+			if (humid < 0) return BIOMES.find((b) => b.name === 'plains')!;
+			return BIOMES.find((b) => b.name === 'mountains')!;
+		} else {
+			if (humid < 0) return BIOMES.find((b) => b.name === 'desert')!;
+			return BIOMES.find((b) => b.name === 'plains')!;
+		}
 	}
 
+	/** --- Heightmap generation influenced by biome --- */
 	private heightAt(x: number, z: number): number {
+		const biom = this.biomeAt(x, z);
 		let n = 0,
 			amp = 1,
 			freq = 1,
 			max = 0;
+
 		for (let o = 0; o < 4; o++) {
 			n += this.perlin.noise((x / this.scale) * freq, (z / this.scale) * freq) * amp;
 			max += amp;
 			amp *= 0.5;
 			freq *= 2;
 		}
-		return Math.floor((n / max) * this.height);
+
+		const normalized = n / max;
+		const height = (biom.baseHeight + normalized * biom.heightVariation) * this.height;
+
+		return Math.floor(height);
 	}
 
 	private caveAt(x: number, y: number, z: number): number {
@@ -78,34 +100,26 @@ export class TerrainGenerator {
 		return n / max;
 	}
 
-	generate(): Uint8Array {
-		const { width, depth, height, waterLevel, caveThreshold } = this;
+	/** --- Get block id at given world position --- */
+	sample(x: number, y: number, z: number): number {
+		const biom = this.biomeAt(x, z);
+		const h = this.heightAt(x, z);
+		const caveNoise = this.caveAt(x, y, z);
 
-		for (let x = 0; x < width; x++) {
-			for (let z = 0; z < depth; z++) {
-				const h = this.heightAt(x, z);
-				for (let y = 0; y < height; y++) {
-					let id = Block.toId('air');
-					const caveNoise = this.caveAt(x, y, z);
-					if (caveNoise > caveThreshold) {
-						id = Block.toId('air');
-					} else if (y <= h) {
-						if (y === h) {
-							id = y <= waterLevel ? Block.toId('sand') : Block.toId('grass');
-						} else if (y > h - 3) {
-							id = Block.toId('dirt');
-						} else {
-							id = Block.toId('stone');
-						}
-					} else if (y <= waterLevel) {
-						id = Block.toId('water');
-					}
+		if (caveNoise > this.caveThreshold) return Block.toId('air');
 
-					this.voxels[this.index(x, y, z)] = id;
-				}
+		if (y <= h) {
+			if (y === h) {
+				return Block.toId(biom.surfaceBlock);
+			} else if (y > h - 3) {
+				return Block.toId(biom.underBlock);
+			} else {
+				return Block.toId(biom.stoneBlock);
 			}
+		} else if (y <= this.waterLevel) {
+			return Block.toId('water');
 		}
 
-		return this.voxels;
+		return Block.toId('air');
 	}
 }
