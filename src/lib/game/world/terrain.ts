@@ -1,5 +1,5 @@
 // src/game/terrain.ts
-import { Block } from './blocks';
+import { BlockId } from './blocks';
 import { Perlin } from './perlin';
 import { BIOMES, type Biom } from './biomes';
 
@@ -45,7 +45,7 @@ export class TerrainGenerator {
 		// 🔧 używamy szumu -1..1 zamiast 0..1
 		const temp = this.perlin.noise(x / 400, z / 400) * 2 - 1;
 		const humid = this.perlin.noise((x + 10000) / 400, (z + 10000) / 400) * 2 - 1;
-		const value = (temp + humid) / 2; // mieszanina
+		//const value = (temp + humid) / 2; // mieszanina
 
 		// 👇 rozdzielamy biomy po kwadracie (temperatura/wilgotność)
 		if (temp < -0.3) {
@@ -106,20 +106,20 @@ export class TerrainGenerator {
 		const h = this.heightAt(x, z);
 		const caveNoise = this.caveAt(x, y, z);
 
-		if (caveNoise > this.caveThreshold) return Block.toId('air');
+		if (caveNoise > this.caveThreshold) return BlockId.Air;
 
 		if (y <= h) {
 			if (y === h) {
-				return Block.toId(biom.surfaceBlock);
+				return biom.surfaceBlock;
 			} else if (y > h - 3) {
-				return Block.toId(biom.underBlock);
+				return biom.underBlock;
 			} else {
-				return Block.toId(biom.stoneBlock);
+				return biom.stoneBlock;
 			}
 		} else if (y <= this.waterLevel) {
-			return Block.toId('water');
+			return BlockId.Water;
 		}
 
-		return Block.toId('air');
+		return BlockId.Air;
 	}
 }

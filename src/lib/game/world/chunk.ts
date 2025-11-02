@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { TerrainGenerator } from './terrain';
 import { Mesher } from './mesher';
+import { textureAtlas } from '../textures/textureAtlas';
 
 export const CHUNK_SIZE = 16;
 
@@ -46,6 +47,7 @@ export class Chunk {
 	}
 
 	buildMesh(): void {
+		//console.log(textureAtlas);
 		if (this.meshGroup) this.meshGroup.dispose();
 		this.meshGroup = Mesher.build(
 			this.scene,
@@ -55,7 +57,8 @@ export class Chunk {
 			CHUNK_SIZE,
 			this.cx,
 			this.cy,
-			this.cz
+			this.cz,
+			textureAtlas
 		);
 	}
 
