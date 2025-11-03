@@ -103,6 +103,7 @@ export class WorldChunkManager {
 		const cx = Math.floor(playerPos.x / CHUNK_SIZE);
 		const cy = Math.floor(playerPos.y / CHUNK_SIZE);
 		const cz = Math.floor(playerPos.z / CHUNK_SIZE);
+		console.log('player biome' + this.generator.biomeAt(playerPos.x, playerPos.z).name);
 
 		const needed = new Set<string>();
 
