@@ -65,121 +65,217 @@ export class Mesher {
 		];
 
 		const index = (x: number, y: number, z: number) => x + y * width + z * width * height;
-		const meshes: THREE.Mesh[] = [];
 		const blockSize = 1;
 
-		for (const [type, { id, color }] of Object.entries(Block.defs)) {
-			if (id === 0) continue; // air
-			const verts: number[] = [];
-			const norms: number[] = [];
-			const uvsArr: number[] = [];
-			const idx: number[] = [];
-			let offset = 0;
+		// Osobne bufory dla solid i transparent bloków
+		const solidData = {
+			positions: [] as number[],
+			normals: [] as number[],
+			uvs: [] as number[],
+			indices: [] as number[],
+			vertexCount: 0
+		};
 
-			for (let x = 0; x < width; x++) {
-				for (let y = 0; y < height; y++) {
-					for (let z = 0; z < depth; z++) {
-						const v = voxels[index(x, y, z)];
-						if (v !== id) continue;
+		const transparentData = {
+			positions: [] as number[],
+			normals: [] as number[],
+			uvs: [] as number[],
+			indices: [] as number[],
+			vertexCount: 0
+		};
 
-						for (let f = 0; f < 6; f++) {
-							const [dx, dy, dz] = dirs[f];
-							const nx = x + dx,
-								ny = y + dy,
-								nz = z + dz;
-							let neighbor = 0;
-							if (nx < 0 || ny < 0 || nz < 0 || nx >= width || ny >= height || nz >= depth) {
-								neighbor = 0;
-							} else {
-								neighbor = voxels[index(nx, ny, nz)];
-							}
+		// Mapa pozycji wierzchołków dla współdzielenia
+		const vertexMap = new Map<string, number>();
+		const transparentVertexMap = new Map<string, number>();
 
-							const neighborBlock = Block.getDef(neighbor as BlockId);
-							if (neighbor === 0 || neighborBlock.transparent) {
-								const vtx = faceVerts[f];
-								const n = new THREE.Vector3(dx, dy, dz);
-								for (let vi = 0; vi < vtx.length; vi++) {
-									const p = vtx[vi];
-									verts.push(
-										(p[0] + x + chunkOffset.x - width / 2) * blockSize,
-										(p[1] + y + chunkOffset.y) * blockSize,
-										(p[2] + z + chunkOffset.z - depth / 2) * blockSize
-									);
-									norms.push(n.x, n.y, n.z);
-									// Push UVs if atlas present
-									if (atlas) {
-										const uvRect = atlas.uvs[id as BlockId];
-										if (uvRect) {
-											// uvRect: [u0, v0, u1, v1] where v0/v1 were calculated from canvas (top-origin)
-											const u0 = uvRect.x;
-											const v0 = uvRect.y;
-											const u1 = uvRect.z;
-											const v1 = uvRect.w;
-											// Canvas y=0 is top; Three's v=0 is bottom. Flip V coordinates.
-											const topV = 1 - v0;
-											const bottomV = 1 - v1;
-											// For the face vertex ordering we map quad verts to these UVs:
-											// [u1,bottom], [u1,top], [u0,top], [u0,bottom]
-											const quadUVs = [
-												[u1, bottomV],
-												[u1, topV],
-												[u0, topV],
-												[u0, bottomV]
-											];
-											const [uu, vv] = quadUVs[vi % 4];
-											uvsArr.push(uu, vv);
-										} else {
-											uvsArr.push(0, 0);
-										}
-									} else {
-										// no atlas -> placeholder UVs
-										uvsArr.push(0, 0);
-									}
+		const getOrCreateVertex = (
+			x: number,
+			y: number,
+			z: number,
+			nx: number,
+			ny: number,
+			nz: number,
+			u: number,
+			v: number,
+			isTransparent: boolean
+		): number => {
+			const data = isTransparent ? transparentData : solidData;
+			const map = isTransparent ? transparentVertexMap : vertexMap;
+
+			// Klucz zawiera pozycję, normal i UV
+			const key = `${x.toFixed(3)},${y.toFixed(3)},${z.toFixed(3)},${nx},${ny},${nz},${u.toFixed(4)},${v.toFixed(4)}`;
+
+			let vertexIndex = map.get(key);
+			if (vertexIndex === undefined) {
+				vertexIndex = data.vertexCount++;
+				map.set(key, vertexIndex);
+
+				data.positions.push(x, y, z);
+				data.normals.push(nx, ny, nz);
+				data.uvs.push(u, v);
+			}
+
+			return vertexIndex;
+		};
+
+		// Iteruj przez wszystkie voxele jeden raz
+		for (let x = 0; x < width; x++) {
+			for (let y = 0; y < height; y++) {
+				for (let z = 0; z < depth; z++) {
+					const blockId = voxels[index(x, y, z)] as BlockId;
+					if (blockId === 0) continue; // skip air
+
+					const blockDef = Block.getDef(blockId);
+					const isTransparent = blockDef.transparent;
+					const data = isTransparent ? transparentData : solidData;
+
+					// Sprawdź każdą ścianę
+					for (let f = 0; f < 6; f++) {
+						const [dx, dy, dz] = dirs[f];
+						const nx = x + dx;
+						const ny = y + dy;
+						const nz = z + dz;
+
+						let neighbor = 0;
+						if (nx < 0 || ny < 0 || nz < 0 || nx >= width || ny >= height || nz >= depth) {
+							neighbor = 0;
+						} else {
+							neighbor = voxels[index(nx, ny, nz)];
+						}
+
+						const neighborBlock = Block.getDef(neighbor as BlockId);
+						if (neighbor === 0 || neighborBlock.transparent) {
+							// Renderuj tę ścianę
+							const vtx = faceVerts[f];
+
+							// Pobierz UV coordinates dla tego bloku
+							let u0 = 0,
+								v0 = 0,
+								u1 = 0,
+								v1 = 0;
+							if (atlas) {
+								const uvRect = atlas.uvs[blockId];
+								if (uvRect) {
+									u0 = uvRect.x;
+									v0 = uvRect.y;
+									u1 = uvRect.z;
+									v1 = uvRect.w;
+
+									// Flip V coordinates (Canvas origin top vs Three.js origin bottom)
+									const topV = 1 - v0;
+									const bottomV = 1 - v1;
+									v0 = topV;
+									v1 = bottomV;
 								}
-								idx.push(offset, offset + 1, offset + 2, offset, offset + 2, offset + 3);
-								offset += 4;
 							}
+
+							// UV mapping dla quad
+							const quadUVs = [
+								[u1, v1], // bottom-right
+								[u1, v0], // top-right
+								[u0, v0], // top-left
+								[u0, v1] // bottom-left
+							];
+
+							// Dodaj 4 wierzchołki (współdzielone jeśli już istnieją)
+							const indices: number[] = [];
+							for (let vi = 0; vi < 4; vi++) {
+								const p = vtx[vi];
+								const worldX = (p[0] + x + chunkOffset.x - width / 2) * blockSize;
+								const worldY = (p[1] + y + chunkOffset.y) * blockSize;
+								const worldZ = (p[2] + z + chunkOffset.z - depth / 2) * blockSize;
+
+								const [uu, vv] = quadUVs[vi];
+
+								const vertexIndex = getOrCreateVertex(
+									worldX,
+									worldY,
+									worldZ,
+									dx,
+									dy,
+									dz,
+									uu,
+									vv,
+									isTransparent
+								);
+
+								indices.push(vertexIndex);
+							}
+
+							// Dodaj 2 trójkąty (6 indeksów)
+							data.indices.push(
+								indices[0],
+								indices[1],
+								indices[2],
+								indices[0],
+								indices[2],
+								indices[3]
+							);
 						}
 					}
 				}
 			}
+		}
 
-			if (verts.length === 0) continue;
+		const meshes: THREE.Mesh[] = [];
 
+		// Stwórz mesh dla solid bloków
+		if (solidData.positions.length > 0) {
 			const geom = new THREE.BufferGeometry();
-			geom.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
-			geom.setAttribute('normal', new THREE.Float32BufferAttribute(norms, 3));
-			if (uvsArr.length > 0) {
-				geom.setAttribute('uv', new THREE.Float32BufferAttribute(uvsArr, 2));
-			}
-			geom.setIndex(idx);
+			geom.setAttribute('position', new THREE.Float32BufferAttribute(solidData.positions, 3));
+			geom.setAttribute('normal', new THREE.Float32BufferAttribute(solidData.normals, 3));
+			geom.setAttribute('uv', new THREE.Float32BufferAttribute(solidData.uvs, 2));
+			geom.setIndex(solidData.indices);
 			geom.computeBoundingSphere();
 
 			let mat: THREE.Material;
 			if (atlas) {
 				mat = new THREE.MeshStandardMaterial({
 					map: atlas.texture,
-					transparent: type === 'water',
-					opacity: type === 'water' ? 0.6 : 1,
 					flatShading: true
 				});
 			} else {
 				mat = new THREE.MeshStandardMaterial({
-					color,
-					transparent: type === 'water',
-					opacity: type === 'water' ? 0.6 : 1,
+					color: 0x808080,
 					flatShading: true
 				});
 			}
-			// if (1) {
-			// 	mat = new THREE.MeshBasicMaterial({
-			// 		color: 0xffffff,
-			// 		wireframe: true
-			// 	});
-			// }
 
 			const mesh = new THREE.Mesh(geom, mat);
-			mesh.castShadow = type !== 'water';
+			mesh.castShadow = true;
+			mesh.receiveShadow = true;
+			scene.add(mesh);
+			meshes.push(mesh);
+		}
+
+		// Stwórz mesh dla transparent bloków
+		if (transparentData.positions.length > 0) {
+			const geom = new THREE.BufferGeometry();
+			geom.setAttribute('position', new THREE.Float32BufferAttribute(transparentData.positions, 3));
+			geom.setAttribute('normal', new THREE.Float32BufferAttribute(transparentData.normals, 3));
+			geom.setAttribute('uv', new THREE.Float32BufferAttribute(transparentData.uvs, 2));
+			geom.setIndex(transparentData.indices);
+			geom.computeBoundingSphere();
+
+			let mat: THREE.Material;
+			if (atlas) {
+				mat = new THREE.MeshStandardMaterial({
+					map: atlas.texture,
+					transparent: true,
+					opacity: 0.6,
+					flatShading: true
+				});
+			} else {
+				mat = new THREE.MeshStandardMaterial({
+					color: 0x4080ff,
+					transparent: true,
+					opacity: 0.6,
+					flatShading: true
+				});
+			}
+
+			const mesh = new THREE.Mesh(geom, mat);
+			mesh.castShadow = false;
 			mesh.receiveShadow = true;
 			scene.add(mesh);
 			meshes.push(mesh);
