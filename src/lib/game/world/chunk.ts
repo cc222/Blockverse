@@ -3,8 +3,9 @@ import * as THREE from 'three';
 import { TerrainGenerator } from './terrain';
 import { Mesher } from './mesher';
 import { textureAtlas } from '../textures/textureAtlas';
+import { WorldSettings } from '../settings/world';
 
-export const CHUNK_SIZE = 16;
+export const CHUNK_SIZE = WorldSettings.CHUNK_SIZE;
 
 export class Chunk {
 	cx: number;

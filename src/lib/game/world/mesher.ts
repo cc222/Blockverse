@@ -171,12 +171,12 @@ export class Mesher {
 					flatShading: true
 				});
 			}
-			if (1) {
-				mat = new THREE.MeshBasicMaterial({
-					color: 0xffffff,
-					wireframe: true
-				});
-			}
+			// if (1) {
+			// 	mat = new THREE.MeshBasicMaterial({
+			// 		color: 0xffffff,
+			// 		wireframe: true
+			// 	});
+			// }
 
 			const mesh = new THREE.Mesh(geom, mat);
 			mesh.castShadow = type !== 'water';

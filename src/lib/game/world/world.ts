@@ -29,8 +29,7 @@ export function createWorld(canvas: HTMLCanvasElement) {
 		depth: 16,
 		height: 64,
 		seed: Math.random() * 10000,
-		waterLevel: 20,
-		caveThreshold: 0.57
+		waterLevel: 20
 	});
 
 	const chunks = new WorldChunkManager(scene, generator);

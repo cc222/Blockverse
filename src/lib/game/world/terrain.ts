@@ -2,6 +2,7 @@
 import { BlockId } from './blocks';
 import { Perlin } from './perlin';
 import { BIOMES, type Biom } from './biomes';
+import { WorldSettings } from '../settings/world';
 
 export class TerrainGenerator {
 	width: number;
@@ -17,10 +18,10 @@ export class TerrainGenerator {
 		width,
 		depth,
 		height,
-		scale = 40,
+		scale = WorldSettings.TERRAIN_SCALE,
 		seed = 0,
 		waterLevel = Math.floor(height * 0.3),
-		caveThreshold = 0.55
+		caveThreshold = WorldSettings.TERRAIN_CAVETHRESHOLD
 	}: {
 		width: number;
 		depth: number;
@@ -84,7 +85,7 @@ export class TerrainGenerator {
 	private caveAt(x: number, y: number, z: number): number {
 		let n = 0,
 			amp = 1,
-			freq = 1,
+			freq = WorldSettings.TERRAIN_CAVEFREQ,
 			max = 0;
 		for (let o = 0; o < 3; o++) {
 			n +=
