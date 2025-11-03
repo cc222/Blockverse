@@ -29,15 +29,19 @@ export class FPSControls {
 
 	private onKeyDown(e: KeyboardEvent) {
 		switch (e.code) {
+			case 'ArrowUp':
 			case 'KeyW':
 				this.moveForward = true;
 				break;
+			case 'ArrowDown':
 			case 'KeyS':
 				this.moveBackward = true;
 				break;
+			case 'ArrowLeft':
 			case 'KeyA':
 				this.moveLeft = true;
 				break;
+			case 'ArrowRight':
 			case 'KeyD':
 				this.moveRight = true;
 				break;
@@ -53,15 +57,19 @@ export class FPSControls {
 
 	private onKeyUp(e: KeyboardEvent) {
 		switch (e.code) {
+			case 'ArrowUp':
 			case 'KeyW':
 				this.moveForward = false;
 				break;
+			case 'ArrowDown':
 			case 'KeyS':
 				this.moveBackward = false;
 				break;
+			case 'ArrowLeft':
 			case 'KeyA':
 				this.moveLeft = false;
 				break;
+			case 'ArrowRight':
 			case 'KeyD':
 				this.moveRight = false;
 				break;
