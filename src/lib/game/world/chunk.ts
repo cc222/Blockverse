@@ -8,6 +8,7 @@ import { WorldSettings } from '../settings/world';
 export const CHUNK_SIZE = WorldSettings.CHUNK_SIZE;
 
 export class Chunk {
+	//TODO: add cashed borders voxels for meshing optimization
 	cx: number;
 	cy: number;
 	cz: number;

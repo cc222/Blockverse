@@ -137,6 +137,7 @@ export class Mesher {
 						const nz = z + dz;
 
 						let neighbor = 0;
+						//TODO: optimize meshing by checking neighbor chunks voxels
 						if (nx < 0 || ny < 0 || nz < 0 || nx >= width || ny >= height || nz >= depth) {
 							neighbor = 0;
 						} else {
