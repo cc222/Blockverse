@@ -1,7 +1,7 @@
 // src/game/world.ts
 import * as THREE from 'three';
-import { TerrainGenerator } from './terrain';
-import { WorldChunkManager } from './chunk';
+import { WorldChunkManager } from './chunk/chunk';
+import { ChunkService } from './chunk/ChunkService';
 
 export function createWorld(canvas: HTMLCanvasElement) {
 	const scene = new THREE.Scene();
@@ -24,15 +24,9 @@ export function createWorld(canvas: HTMLCanvasElement) {
 	scene.add(dir);
 
 	// 🌍 generator i menedżer chunków
-	const generator = new TerrainGenerator({
-		width: 16,
-		depth: 16,
-		height: 64,
-		seed: Math.random() * 10000,
-		waterLevel: 20
-	});
-
-	const chunks = new WorldChunkManager(scene, generator);
+	const seed = Math.random() * 10000;
+	const chunkService = new ChunkService();
+	const chunks = new WorldChunkManager(scene, seed, chunkService);
 
 	function animate() {
 		requestAnimationFrame(animate);
