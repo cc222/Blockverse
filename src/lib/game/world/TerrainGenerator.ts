@@ -30,7 +30,7 @@ class SimplexNoise {
 			seed = (seed * 9301 + 49297) % 233280;
 			n = seed / 233280;
 			q = Math.floor(i * n);
-			const tmp = p[i];
+			const tmp: number = p[i];
 			p[i] = p[q];
 			p[q] = tmp;
 		}
