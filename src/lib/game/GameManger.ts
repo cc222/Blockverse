@@ -13,15 +13,17 @@ export class GameManager {
 	camera!: THREE.PerspectiveCamera;
 	scene!: THREE.Scene;
 	prevFrameTime!: number;
+	gameCanvas!: HTMLCanvasElement;
 	dispose: () => void = () => {};
 
 	private constructor(gameCanvas: HTMLCanvasElement) {
 		window.addEventListener('resize', this.handleResize);
+		this.gameCanvas = gameCanvas;
 		const { scene, camera, renderer } = createWorld(gameCanvas);
 		this.scene = scene;
 		this.camera = camera;
 		this.renderer = renderer;
-		this.controlsManager = new GameControlsManager(camera, renderer.domElement);
+		this.controlsManager = new GameControlsManager(camera);
 		this.statsOverlayManager = new StatsOverlayManager();
 	}
 

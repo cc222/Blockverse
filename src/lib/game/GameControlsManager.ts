@@ -1,7 +1,13 @@
 import * as THREE from 'three';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
+import { GameManager } from './GameManger';
 
-export class GameControlsManager {
+interface GameControlsManagerEvents {
+	unLock: { type: 'unLock' };
+	lock: { type: 'lock' };
+}
+
+export class GameControlsManager extends THREE.EventDispatcher<GameControlsManagerEvents> {
 	controls: PointerLockControls;
 	velocity = new THREE.Vector3();
 	direction = new THREE.Vector3();
@@ -12,24 +18,36 @@ export class GameControlsManager {
 	moveUp = false;
 	moveDown = false;
 	speed = 5.0;
-	onExitPointerLock?: () => void;
 
-	public EnterPointerLock() {
+	private _boundKeyDown = (e: KeyboardEvent) => this.onKeyDown(e);
+	private _boundKeyUp = (e: KeyboardEvent) => this.onKeyUp(e);
+	private _boundOnExitPointerLock = () => {
+		this.dispatchEvent({ type: 'unLock' });
+	};
+	EnterPointerLock = () => {
 		this.controls.lock();
+		this.dispatchEvent({ type: 'lock' });
+	};
+
+	constructor(camera: THREE.PerspectiveCamera) {
+		super();
+		this.controls = new PointerLockControls(camera, GameManager.instance.gameCanvas);
+		this.initListeners();
 	}
 
-	constructor(camera: THREE.PerspectiveCamera, domElement: HTMLElement) {
-		this.controls = new PointerLockControls(camera, domElement);
-		this.initListeners(domElement);
+	private initListeners() {
+		GameManager.instance.gameCanvas.addEventListener('click', this.EnterPointerLock);
+		this.controls.addEventListener('unlock', this._boundOnExitPointerLock);
+
+		window.addEventListener('keydown', this._boundKeyDown);
+		window.addEventListener('keyup', this._boundKeyUp);
 	}
 
-	private initListeners(domElement: HTMLElement) {
-		domElement.addEventListener('click', () => {
-			this.EnterPointerLock();
-		});
-
-		window.addEventListener('keydown', (e) => this.onKeyDown(e));
-		window.addEventListener('keyup', (e) => this.onKeyUp(e));
+	dispose() {
+		GameManager.instance.gameCanvas.removeEventListener('click', this.EnterPointerLock);
+		this.controls.removeEventListener('unlock', this._boundOnExitPointerLock);
+		window.removeEventListener('keydown', this._boundKeyDown);
+		window.removeEventListener('keyup', this._boundKeyUp);
 	}
 
 	private onKeyDown(e: KeyboardEvent) {
