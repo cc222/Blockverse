@@ -1,7 +1,7 @@
 import { spawn, Worker, Pool } from 'threads';
 
 const CHUNK_SIZE = 16;
-const POOL_SIZE = 4; // liczba równoległych workerów
+const POOL_SIZE = 8; // liczba równoległych workerów
 
 export class ChunkService {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any

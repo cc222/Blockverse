@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
 
-export class FPSControls {
+export class GameControlsManager {
 	controls: PointerLockControls;
 	velocity = new THREE.Vector3();
 	direction = new THREE.Vector3();
@@ -12,6 +12,11 @@ export class FPSControls {
 	moveUp = false;
 	moveDown = false;
 	speed = 5.0;
+	onExitPointerLock?: () => void;
+
+	public EnterPointerLock() {
+		this.controls.lock();
+	}
 
 	constructor(camera: THREE.PerspectiveCamera, domElement: HTMLElement) {
 		this.controls = new PointerLockControls(camera, domElement);
@@ -20,7 +25,7 @@ export class FPSControls {
 
 	private initListeners(domElement: HTMLElement) {
 		domElement.addEventListener('click', () => {
-			this.controls.lock();
+			this.EnterPointerLock();
 		});
 
 		window.addEventListener('keydown', (e) => this.onKeyDown(e));

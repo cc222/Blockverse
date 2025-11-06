@@ -208,8 +208,6 @@ export interface GeneratorConfig {
 	// Jaskinie - rzadsze
 	caveScale?: number;
 	caveThreshold?: number;
-	minCaveHeight?: number;
-	maxCaveHeight?: number;
 
 	// Rudy minerałów
 	oreScale?: number;
@@ -265,10 +263,8 @@ export class TerrainGenerator {
 			temperatureScale: 0.001,
 			humidityScale: 0.0012,
 			waterLevel: 62,
-			caveScale: 0.005,
-			caveThreshold: 0.05, // Wyższy = mniej jaskiń
-			minCaveHeight: 15,
-			maxCaveHeight: 70,
+			caveScale: 0.01,
+			caveThreshold: 0.15, // niszy = mniej jaskiń
 			oreScale: 0.08,
 			oreRarity: 0.7, // Wyższy = rzadsze rudy
 			cliffThreshold: 0.4,
@@ -425,11 +421,7 @@ export class TerrainGenerator {
 		};
 
 		// Jaskinie - rzadsze
-		if (
-			this.config.enableCaves &&
-			y >= this.config.minCaveHeight &&
-			y <= this.config.maxCaveHeight
-		) {
+		if (this.config.enableCaves) {
 			const cave1 = this.caveNoise1.noise(
 				x * this.config.caveScale,
 				y * this.config.caveScale,
