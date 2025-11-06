@@ -5,12 +5,14 @@
 	import { createTextureAtlas } from '$lib/game/textures/textureAtlas';
 	import { GameControlsManager } from '$lib/game/GameControlsManager';
 	import { GameManager } from '$lib/game/GameManger';
+	import SoftCursorForMenus from './menus/SoftCursorForMenus.svelte';
 
 	let gameCanvas: HTMLCanvasElement;
 	let dispose: (() => void) | null = null;
 
 	onMount(() => {
 		(async () => {
+			console.log('Initializing game...');
 			dispose = await GameManager.initialize(gameCanvas);
 		})();
 		return () => {
@@ -24,6 +26,7 @@
 </script>
 
 <canvas bind:this={gameCanvas} class="fixed top-0 left-0 h-full w-full"></canvas>
+<SoftCursorForMenus />
 
 <style>
 	canvas {

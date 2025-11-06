@@ -1,85 +1,24 @@
 <script lang="ts">
-	let showMenu = $state(false);
-	let selectedOption = $state(0);
-
-	const menuOptions = [
-		{ label: 'Wznów grę', action: 'resume' },
-		{ label: 'Ustawienia', action: 'settings' },
-		{ label: 'Osiągnięcia', action: 'achievements' },
-		{ label: 'Zapisz i wyjdź', action: 'saveAndQuit' },
-		{ label: 'Wyjdź bez zapisywania', action: 'quit' }
-	];
-
-	// Obsługa klawiatury
-	function handleKeydown(event) {
-		if (event.key === 'Escape') {
-			if (showMenu) {
-				resumeGame();
-			} else {
-				showMenu = true;
-				document.exitPointerLock?.();
-			}
-			event.preventDefault();
-		}
-
-		if (!showMenu) return;
-
-		if (event.key === 'ArrowUp') {
-			selectedOption = (selectedOption - 1 + menuOptions.length) % menuOptions.length;
-			event.preventDefault();
-		} else if (event.key === 'ArrowDown') {
-			selectedOption = (selectedOption + 1) % menuOptions.length;
-			event.preventDefault();
-		} else if (event.key === 'Enter') {
-			handleOptionClick(menuOptions[selectedOption].action);
-			event.preventDefault();
-		}
-	}
-
-	function resumeGame() {
-		showMenu = false;
-		// Przywróć pointer lock dla gry
-		document.body.requestPointerLock?.();
-	}
-
-	function handleOptionClick(action) {
-		switch (action) {
-			case 'resume':
-				resumeGame();
-				break;
-			case 'settings':
-				console.log('Otwórz ustawienia');
-				break;
-			case 'achievements':
-				console.log('Otwórz osiągnięcia');
-				break;
-			case 'saveAndQuit':
-				console.log('Zapisz i wyjdź do menu głównego');
-				break;
-			case 'quit':
-				console.log('Wyjdź bez zapisywania');
-				break;
-		}
-	}
-
-	$effect(() => {
-		window.addEventListener('keydown', handleKeydown);
-		return () => window.removeEventListener('keydown', handleKeydown);
-	});
+	import type { Menu } from './Menu.svelte';
+	let {
+		menu
+	}: {
+		menu: Menu;
+	} = $props();
 </script>
 
-{#if showMenu}
+{#if menu.showMenu}
 	<div class="pause-overlay">
 		<div class="pause-menu">
 			<h1 class="menu-title">Menu Gry</h1>
 
 			<div class="menu-options">
-				{#each menuOptions as option, index}
+				{#each menu.menuOptions as option, index}
 					<button
 						class="menu-button"
-						class:selected={selectedOption === index}
-						onmouseenter={() => (selectedOption = index)}
-						onclick={() => handleOptionClick(option.action)}
+						class:selected={menu.selectedOption === index}
+						onmouseenter={() => (menu.selectedOption = index)}
+						onclick={() => option.action()}
 					>
 						{option.label}
 					</button>

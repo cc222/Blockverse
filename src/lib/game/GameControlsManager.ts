@@ -1,11 +1,31 @@
 import * as THREE from 'three';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
 import { GameManager } from './GameManger';
+import { PauseMenu } from '$lib/components/menus/PauseMenu';
 
-interface GameControlsManagerEvents {
-	unLock: { type: 'unLock' };
-	lock: { type: 'lock' };
-}
+type GameControlEventName =
+	| 'unLock'
+	| 'lock'
+	| 'forwardKeyUp'
+	| 'backwardKeyUp'
+	| 'rightKeyUp'
+	| 'leftKeyUp'
+	| 'upKeyUp'
+	| 'downKeyUp'
+	| 'escapeKeyUp'
+	| 'enterKeyUp'
+	| 'forwardKeyDown'
+	| 'backwardKeyDown'
+	| 'rightKeyDown'
+	| 'leftKeyDown'
+	| 'upKeyDown'
+	| 'downKeyDown'
+	| 'escapeKeyDown'
+	| 'enterKeyDown';
+
+type GameControlsManagerEvents = {
+	[K in GameControlEventName]: { type: K };
+};
 
 export class GameControlsManager extends THREE.EventDispatcher<GameControlsManagerEvents> {
 	controls: PointerLockControls;
@@ -23,8 +43,11 @@ export class GameControlsManager extends THREE.EventDispatcher<GameControlsManag
 	private _boundKeyUp = (e: KeyboardEvent) => this.onKeyUp(e);
 	private _boundOnExitPointerLock = () => {
 		this.dispatchEvent({ type: 'unLock' });
+		console.log('Exiting pointer lock ');
+		PauseMenu.instance.openMenu();
 	};
 	EnterPointerLock = () => {
+		console.log('Entering pointer lock');
 		this.controls.lock();
 		this.dispatchEvent({ type: 'lock' });
 	};
@@ -52,27 +75,39 @@ export class GameControlsManager extends THREE.EventDispatcher<GameControlsManag
 
 	private onKeyDown(e: KeyboardEvent) {
 		switch (e.code) {
+			case 'Enter':
+				if (!this.controls.isLocked) this.dispatchEvent({ type: 'enterKeyDown' });
+				break;
+			case 'Escape':
+				if (!this.controls.isLocked) this.dispatchEvent({ type: 'escapeKeyDown' });
+				break;
 			case 'ArrowUp':
 			case 'KeyW':
+				if (!this.controls.isLocked) this.dispatchEvent({ type: 'forwardKeyDown' });
 				this.moveForward = true;
 				break;
 			case 'ArrowDown':
 			case 'KeyS':
+				if (!this.controls.isLocked) this.dispatchEvent({ type: 'backwardKeyDown' });
 				this.moveBackward = true;
 				break;
 			case 'ArrowLeft':
 			case 'KeyA':
+				if (!this.controls.isLocked) this.dispatchEvent({ type: 'leftKeyDown' });
 				this.moveLeft = true;
 				break;
 			case 'ArrowRight':
 			case 'KeyD':
+				if (!this.controls.isLocked) this.dispatchEvent({ type: 'rightKeyDown' });
 				this.moveRight = true;
 				break;
 			case 'Space':
+				if (!this.controls.isLocked) this.dispatchEvent({ type: 'upKeyDown' });
 				this.moveUp = true;
 				break;
 			case 'ShiftLeft':
 			case 'ShiftRight':
+				if (!this.controls.isLocked) this.dispatchEvent({ type: 'downKeyDown' });
 				this.moveDown = true;
 				break;
 		}
@@ -80,27 +115,39 @@ export class GameControlsManager extends THREE.EventDispatcher<GameControlsManag
 
 	private onKeyUp(e: KeyboardEvent) {
 		switch (e.code) {
+			case 'Enter':
+				if (!this.controls.isLocked) this.dispatchEvent({ type: 'enterKeyUp' });
+				break;
+			case 'Escape':
+				if (!this.controls.isLocked) this.dispatchEvent({ type: 'escapeKeyUp' });
+				break;
 			case 'ArrowUp':
 			case 'KeyW':
+				if (!this.controls.isLocked) this.dispatchEvent({ type: 'forwardKeyUp' });
 				this.moveForward = false;
 				break;
 			case 'ArrowDown':
 			case 'KeyS':
+				if (!this.controls.isLocked) this.dispatchEvent({ type: 'backwardKeyUp' });
 				this.moveBackward = false;
 				break;
 			case 'ArrowLeft':
 			case 'KeyA':
+				if (!this.controls.isLocked) this.dispatchEvent({ type: 'leftKeyUp' });
 				this.moveLeft = false;
 				break;
 			case 'ArrowRight':
 			case 'KeyD':
+				if (!this.controls.isLocked) this.dispatchEvent({ type: 'rightKeyUp' });
 				this.moveRight = false;
 				break;
 			case 'Space':
+				if (!this.controls.isLocked) this.dispatchEvent({ type: 'upKeyUp' });
 				this.moveUp = false;
 				break;
 			case 'ShiftLeft':
 			case 'ShiftRight':
+				if (!this.controls.isLocked) this.dispatchEvent({ type: 'downKeyUp' });
 				this.moveDown = false;
 				break;
 		}

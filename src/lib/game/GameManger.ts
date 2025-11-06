@@ -17,6 +17,7 @@ export class GameManager {
 	dispose: () => void = () => {};
 
 	private constructor(gameCanvas: HTMLCanvasElement) {
+		GameManager.instance = this;
 		window.addEventListener('resize', this.handleResize);
 		this.gameCanvas = gameCanvas;
 		const { scene, camera, renderer } = createWorld(gameCanvas);
@@ -60,9 +61,8 @@ export class GameManager {
 
 	public static async initialize(gameCanvas: HTMLCanvasElement): Promise<() => void> {
 		if (!GameManager.instance) {
-			GameManager.instance = new GameManager(gameCanvas);
-			return await GameManager.instance.initializeAsync();
+			new GameManager(gameCanvas);
 		}
-		return () => {};
+		return await GameManager.instance.initializeAsync();
 	}
 }

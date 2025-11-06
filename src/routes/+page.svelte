@@ -1,11 +1,12 @@
 <script lang="ts">
-	import PauseMenu from '$lib/components/PauseMenu.svelte';
+	import Menu from '$lib/components/menus/MenuComponent.svelte';
+	import { PauseMenu } from '$lib/components/menus/PauseMenu';
 	import ThreeScene from '$lib/components/ThreeScene.svelte';
 </script>
 
 <main>
 	<ThreeScene />
-	<PauseMenu />
+	<Menu menu={PauseMenu.instance} />
 </main>
 
 <style>
