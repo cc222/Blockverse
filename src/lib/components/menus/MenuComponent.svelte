@@ -1,10 +1,15 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import type { Menu } from './Menu.svelte';
 	let {
 		menu
 	}: {
 		menu: Menu;
 	} = $props();
+
+	onMount(() => {
+		return menu.initialize();
+	});
 </script>
 
 {#if menu.showMenu}
@@ -18,9 +23,9 @@
 						class="menu-button"
 						class:selected={menu.selectedOption === index}
 						onmouseenter={() => (menu.selectedOption = index)}
-						onclick={() => option.action()}
+						onclick={() => option.onClick()}
 					>
-						{option.label}
+						{option.label + (option.selectedOption ? `: ${option.selectedOption}` : '')}
 					</button>
 				{/each}
 			</div>

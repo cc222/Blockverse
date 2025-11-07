@@ -1,24 +1,23 @@
 import { GameManager } from '$lib/game/GameManger';
-export interface MenuOption {
-	label: string;
-	action: () => void;
-}
+import type { MenuOption } from './MenuOption.svelte';
 export class Menu {
 	showMenu = $state(false);
 	selectedOption = $state(0);
 	title = 'Menu Gry';
 	menuHint =
 		'Użyj strzałek ↑↓ lub myszy do nawigacji • Enter lub kliknij aby wybrać • ESC aby wrócić';
-	menuOptions: MenuOption[];
+	menuOptions: MenuOption[] = $state([]);
 
 	constructor({
 		menuOptions,
 		onMenuClose,
+		onMenuExit,
 		title,
 		menuHint
 	}: {
 		menuOptions: MenuOption[];
-		onMenuClose: () => void;
+		onMenuClose?: () => void;
+		onMenuExit?: () => void;
 		title?: string;
 		menuHint?: string;
 	}) {
@@ -26,15 +25,26 @@ export class Menu {
 		this.menuHint = menuHint || this.menuHint;
 		this.menuOptions = menuOptions;
 		this.onMenuClose = onMenuClose;
+		this.onMenuExit = onMenuExit;
 	}
 
-	onMenuClose: () => void;
+	onMenuClose?: () => void;
+	onMenuExit?: () => void;
+	onInitialize?: () => void;
+
+	initialize() {
+		return this.onInitialize?.();
+	}
+
+	exitMenu() {
+		this.closeMenu();
+		this.onMenuExit?.();
+	}
 
 	_boundEscapeKeyDown = () => {
-		this.closeMenu();
+		this.exitMenu();
 	};
 	_boundKeyUp = (e: KeyboardEvent) => {
-		console.log('locking via esc');
 		if (e.key === 'Escape') {
 			this._boundEscapeKeyDown();
 		}
@@ -58,22 +68,21 @@ export class Menu {
 	initListeners() {
 		//make it via document to satisfy pointer lock api
 		document.addEventListener('keyup', this._boundKeyUp);
-		GameManager.instance.controlsManager.addEventListener('enterKeyDown', this._boundEnterKeyDown);
-		GameManager.instance.controlsManager.addEventListener('upKeyDown', this._bundForwardKeyDown);
-		GameManager.instance.controlsManager.addEventListener('downKeyDown', this._boundDownKeyDown);
+		const controls = GameManager.instance.controlsManager;
+		controls.addEventListener('enterKeyDown', this._boundEnterKeyDown);
+		controls.addEventListener('upKeyDown', this._bundForwardKeyDown);
+		controls.addEventListener('downKeyDown', this._boundDownKeyDown);
 	}
 	disposeListeners() {
 		document.removeEventListener('keyup', this._boundKeyUp);
-		GameManager.instance.controlsManager.removeEventListener(
-			'enterKeyDown',
-			this._boundEnterKeyDown
-		);
-		GameManager.instance.controlsManager.removeEventListener('upKeyDown', this._bundForwardKeyDown);
-		GameManager.instance.controlsManager.removeEventListener('downKeyDown', this._boundDownKeyDown);
+		const controls = GameManager.instance.controlsManager;
+		controls.removeEventListener('enterKeyDown', this._boundEnterKeyDown);
+		controls.removeEventListener('upKeyDown', this._bundForwardKeyDown);
+		controls.removeEventListener('downKeyDown', this._boundDownKeyDown);
 	}
 	closeMenu() {
 		this.showMenu = false;
 		this.disposeListeners();
-		this.onMenuClose();
+		this.onMenuClose?.();
 	}
 }
