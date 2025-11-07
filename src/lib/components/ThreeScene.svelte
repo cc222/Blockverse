@@ -1,9 +1,5 @@
 <script lang="ts">
-	import { createWorld } from '$lib/game/world/world';
 	import { onMount, onDestroy } from 'svelte';
-	import Stats from 'stats.js';
-	import { createTextureAtlas } from '$lib/game/textures/textureAtlas';
-	import { GameControlsManager } from '$lib/game/GameControlsManager';
 	import { GameManager } from '$lib/game/GameManger';
 
 	let gameCanvas: HTMLCanvasElement;

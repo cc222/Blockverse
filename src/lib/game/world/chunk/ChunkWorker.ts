@@ -1,5 +1,5 @@
 import { expose } from 'threads/worker';
-import { TerrainGenerator } from '../TerrainGenerator';
+import { TerrainGenerator } from '../generator/TerrainGenerator';
 
 expose({
 	generateChunk: (cx: number, cy: number, cz: number, CHUNK_SIZE: number, seed: number) => {

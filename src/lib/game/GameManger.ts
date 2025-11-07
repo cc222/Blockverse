@@ -1,62 +1,64 @@
 import { GameControlsManager } from './GameControlsManager';
 import { StatsOverlayManager } from './StatsOverlayManager';
 import { createTextureAtlas } from './textures/textureAtlas';
-import { createWorld } from './world/world';
-import * as THREE from 'three';
+import { ThreeManager } from './ThreeManager';
+import { MesherService } from './world/chunk/MesherService';
+import type { Mesher } from './world/mesher';
+import { WorldManager } from './world/WorldManager';
 
 export class GameManager {
 	public static instance: GameManager;
 
 	controlsManager!: GameControlsManager;
 	statsOverlayManager!: StatsOverlayManager;
-	renderer!: THREE.WebGLRenderer;
-	camera!: THREE.PerspectiveCamera;
-	scene!: THREE.Scene;
 	prevFrameTime!: number;
 	gameCanvas!: HTMLCanvasElement;
+	mesherService!: MesherService;
 	dispose: () => void = () => {};
 
-	private constructor(gameCanvas: HTMLCanvasElement) {
+	private constructor(canvas: HTMLCanvasElement) {
+		this.gameCanvas = canvas;
 		GameManager.instance = this;
-		window.addEventListener('resize', this.handleResize);
-		this.gameCanvas = gameCanvas;
-		const { scene, camera, renderer } = createWorld(gameCanvas);
-		this.scene = scene;
-		this.camera = camera;
-		this.renderer = renderer;
-		this.controlsManager = new GameControlsManager(camera);
-		this.statsOverlayManager = new StatsOverlayManager();
+
+		window.addEventListener('resize', this.onResize);
 	}
 
-	gameAnimationFrame = () => {
-		requestAnimationFrame(this.gameAnimationFrame);
-		const time = performance.now();
-		const delta = (time - this.prevFrameTime) / 1000;
-		this.prevFrameTime = time;
+	private loop = () => {
+		requestAnimationFrame(this.loop);
+		const now = performance.now();
+		const delta = (now - this.prevFrameTime) / 1000;
+		this.prevFrameTime = now;
+
 		this.statsOverlayManager.beginStatsFrame();
-		GameManager.instance.controlsManager.update(delta);
-		this.renderer.render(this.scene, this.camera);
+		this.controlsManager.update(delta);
+		WorldManager.update();
+		ThreeManager.render();
 		this.statsOverlayManager.endStatsFrame();
 	};
 
-	handleResize = () => {
-		this.camera.aspect = window.innerWidth / window.innerHeight;
-		this.camera.updateProjectionMatrix();
-		this.renderer.setSize(window.innerWidth, window.innerHeight);
+	private onResize = () => {
+		const { camera, renderer } = ThreeManager;
+		camera.aspect = window.innerWidth / window.innerHeight;
+		camera.updateProjectionMatrix();
+		renderer.setSize(window.innerWidth, window.innerHeight);
 	};
 
 	private async initializeAsync(): Promise<() => void> {
 		await createTextureAtlas();
+		this.mesherService = new MesherService();
+		ThreeManager.init(this.gameCanvas);
+		WorldManager.init();
+
+		this.controlsManager = new GameControlsManager(ThreeManager.camera);
+		this.statsOverlayManager = new StatsOverlayManager();
 
 		this.prevFrameTime = performance.now();
-		this.gameAnimationFrame();
+		this.loop();
 
-		this.dispose = () => {
-			window.removeEventListener('resize', this.handleResize);
-			// cleanup (svelte onDestroy also called)
-			this.renderer.dispose();
+		return () => {
+			window.removeEventListener('resize', this.onResize);
+			ThreeManager.renderer.dispose();
 		};
-		return this.dispose;
 	}
 
 	public static async initialize(gameCanvas: HTMLCanvasElement): Promise<() => void> {
