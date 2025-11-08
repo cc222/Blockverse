@@ -2,17 +2,41 @@ import * as THREE from 'three';
 import { ChunkService } from './ChunkService';
 import { Chunk } from './Chunk';
 import { CHUNK_SIZE, HALO } from '$lib/game/GameConts';
-
+import { textureAtlas } from '$lib/game/textures/textureAtlas';
+import type { MeshData } from './MeshData';
+type Job = { key: string; chunk: Chunk; token: number; priority: number };
 export class WorldChunkManager {
 	private scene: THREE.Scene;
 	private seed: number;
 	private chunkService: ChunkService;
+
 	private lastPlayerChunkX: number = 0;
 	private lastPlayerChunkZ: number = 0;
 	private lastPlayerChunkY: number = 0;
 
 	private readonly viewDistance = 10; // liczba chunków w promieniu
 	private chunks = new Map<string, Chunk>();
+
+	private queue: Job[] = [];
+	private queued = new Set<string>();
+	private inFlight = new Set<string>();
+	private readonly REMESH_BUDGET = 2;
+
+	private _pumpScheduled = false;
+	private playerPos = new THREE.Vector3();
+
+	private solidMat = new THREE.MeshStandardMaterial({
+		color: 0x808080,
+		flatShading: true,
+		map: textureAtlas.texture
+	});
+	private transpMat = new THREE.MeshStandardMaterial({
+		color: 0x80c0ff,
+		transparent: true,
+		opacity: 0.6,
+		flatShading: true,
+		map: textureAtlas.texture
+	});
 
 	constructor(scene: THREE.Scene, seed: number, chunkService: ChunkService) {
 		this.scene = scene;
@@ -28,6 +52,7 @@ export class WorldChunkManager {
 	 * Główny update — sprawdza, które chunki powinny być widoczne
 	 */
 	update(playerPos: THREE.Vector3) {
+		this.playerPos.copy(playerPos);
 		const cx = Math.floor(playerPos.x / CHUNK_SIZE);
 		const cz = Math.floor(playerPos.z / CHUNK_SIZE);
 		const cy = Math.floor(playerPos.y / CHUNK_SIZE);
@@ -61,6 +86,100 @@ export class WorldChunkManager {
 		this.lastPlayerChunkX = cx;
 		this.lastPlayerChunkZ = cz;
 		this.lastPlayerChunkY = cy;
+	}
+
+	enqueueRemesh(chunk: Chunk, token: number) {
+		const key = this.getChunkKey(chunk.cx, chunk.cy, chunk.cz);
+		if (this.inFlight.has(key)) return;
+
+		if (!this.queued.has(key)) {
+			this.queued.add(key);
+			this.queue.push({ key, chunk, token, priority: this.priorityFor(chunk) });
+		} else {
+			// odśwież istniejący wpis (token + priority)
+			for (let i = 0; i < this.queue.length; i++) {
+				if (this.queue[i].key === key) {
+					this.queue[i].token = token;
+					this.queue[i].priority = this.priorityFor(chunk);
+					break;
+				}
+			}
+		}
+		this.schedulePump();
+	}
+
+	private pumpQueue() {
+		this.queue.sort((a, b) => a.priority - b.priority);
+
+		let budget = this.REMESH_BUDGET;
+		while (budget > 0 && this.queue.length) {
+			const job = this.queue.shift()!;
+			console.log('rendering poitiry: ', job.priority);
+			const { key, token, chunk } = job;
+			this.queued.delete(key);
+
+			// jeśli w mapie nie ma już TEGO samego obiektu, porzuć joba
+			const current = this.chunks.get(key);
+			if (!current || current !== chunk) {
+				continue;
+			}
+			if (this.inFlight.has(key)) continue;
+
+			this.inFlight.add(key);
+
+			chunk
+				.buildMeshData()
+				.then(({ solid, transparent }: { solid: MeshData; transparent: MeshData }) => {
+					if (token !== chunk.currentToken()) return; // DROP przestarzałe
+
+					const meshes: THREE.Mesh[] = [];
+					const mk = (data: MeshData, material: THREE.Material) => {
+						if (!data || data.positions.length === 0) return;
+						const g = new THREE.BufferGeometry();
+						g.setAttribute('position', new THREE.Float32BufferAttribute(data.positions, 3));
+						g.setAttribute('normal', new THREE.Float32BufferAttribute(data.normals, 3));
+						g.setAttribute('uv', new THREE.Float32BufferAttribute(data.uvs, 2));
+						g.setIndex(new THREE.Uint32BufferAttribute(data.indices, 1));
+
+						const m = new THREE.Mesh(g, material);
+						m.castShadow = true;
+						m.receiveShadow = true;
+						meshes.push(m);
+					};
+
+					mk(solid, this.solidMat);
+					mk(transparent, this.transpMat);
+
+					chunk.applyMesh(meshes);
+				})
+				.finally(() => {
+					this.inFlight.delete(key);
+					if (this.queue.length) this.schedulePump();
+				});
+
+			budget--;
+		}
+	}
+
+	private priorityFor(c: Chunk): number {
+		const center = new THREE.Vector3(
+			c.cx * CHUNK_SIZE + CHUNK_SIZE * 0.5,
+			c.cy * CHUNK_SIZE + CHUNK_SIZE * 0.5,
+			c.cz * CHUNK_SIZE + CHUNK_SIZE * 0.5
+		);
+		const d2 = center.distanceToSquared(this.playerPos);
+		// preferuj chunki bez mesha (pierwszy render) – mniejsza priority-wartość = wcześniej
+		const firstRenderBonus = c.meshes ? 1000 : 0;
+		return d2 + firstRenderBonus;
+	}
+
+	private schedulePump() {
+		if (this._pumpScheduled) return;
+		this._pumpScheduled = true;
+		requestAnimationFrame(() => {
+			this._pumpScheduled = false;
+			this.pumpQueue();
+		});
 	}
 
 	getHaloVoxels(cx: number, cy: number, cz: number): Uint8Array {
@@ -125,7 +244,7 @@ export class WorldChunkManager {
 		for (const [dx, dy, dz] of this.neighborDirs) {
 			const neighborKey = this.getChunkKey(cx + dx, cy + dy, cz + dz);
 			const neighborChunk = this.chunks.get(neighborKey);
-			if (neighborChunk) neighborChunk.requestRemesh();
+			if (neighborChunk) requestAnimationFrame(() => neighborChunk.requestRemesh());
 		}
 	}
 
@@ -142,5 +261,8 @@ export class WorldChunkManager {
 			chunk.unload();
 		}
 		this.chunks.clear();
+		this.queue = [];
+		this.queued.clear();
+		this.inFlight.clear();
 	}
 }
