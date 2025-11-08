@@ -1,6 +1,7 @@
 import { expose } from 'threads/worker';
 import { Block, BlockId } from '../blocks';
 import type { MeshBuffers } from './MeshBuffers';
+import { HALO } from '$lib/game/GameConts';
 
 interface UVRect {
 	x: number;
@@ -20,7 +21,11 @@ expose({
 		cz: number,
 		blockUVs: Record<number, UVRect> // przekazywane z głównego wątku
 	): MeshBuffers {
-		const chunkOffset = { x: cx * width, y: cy * height, z: cz * depth };
+		const chunkOffset = {
+			x: cx * (width - 2 * HALO),
+			y: cy * (height - 2 * HALO),
+			z: cz * (depth - 2 * HALO)
+		};
 		const blockSize = 1;
 
 		const dirs = [
@@ -84,9 +89,9 @@ expose({
 		const solid: MeshData = { positions: [], normals: [], uvs: [], indices: [], vcount: 0 };
 		const trans: MeshData = { positions: [], normals: [], uvs: [], indices: [], vcount: 0 };
 
-		for (let x = 0; x < width; x++) {
-			for (let y = 0; y < height; y++) {
-				for (let z = 0; z < depth; z++) {
+		for (let x = HALO; x < width - HALO; x++) {
+			for (let y = HALO; y < height - HALO; y++) {
+				for (let z = HALO; z < depth - HALO; z++) {
 					const blockId = voxels[index(x, y, z)] as BlockId;
 					if (!blockId) continue;
 
@@ -127,9 +132,9 @@ expose({
 
 							for (let vi = 0; vi < 4; vi++) {
 								const [vx, vy, vz] = vtx[vi];
-								const worldX = (vx + x + chunkOffset.x - width / 2) * blockSize;
-								const worldY = (vy + y + chunkOffset.y) * blockSize;
-								const worldZ = (vz + z + chunkOffset.z - depth / 2) * blockSize;
+								const worldX = (vx + x - HALO + chunkOffset.x - width / 2) * blockSize;
+								const worldY = (vy + y - HALO + chunkOffset.y) * blockSize;
+								const worldZ = (vz + z - HALO + chunkOffset.z - depth / 2) * blockSize;
 								const [uu, vv] = quadUVs[vi];
 
 								target.positions.push(worldX, worldY, worldZ);

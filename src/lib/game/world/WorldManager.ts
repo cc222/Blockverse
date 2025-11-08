@@ -3,6 +3,7 @@ import { ChunkService } from './chunk/ChunkService';
 import { WorldChunkManager } from './chunk/WorldChunkManager';
 
 export class WorldManager {
+	//TODO: make non-static add to GameManager
 	static seed: number;
 	static chunkService: ChunkService;
 	static chunkManager: WorldChunkManager;

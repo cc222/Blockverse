@@ -1,10 +1,9 @@
 // src/game/chunk.ts
+import { CHUNK_SIZE, HALO } from '$lib/game/GameConts';
 import { GameManager } from '$lib/game/GameManger';
-import { WorldSettings } from '$lib/game/settings/world';
 import { textureAtlas } from '$lib/game/textures/textureAtlas';
 import * as THREE from 'three';
-
-export const CHUNK_SIZE = WorldSettings.CHUNK_SIZE;
+import { WorldManager } from '../WorldManager';
 
 export class Chunk {
 	//TODO: add cashed borders voxels for meshing optimization
@@ -12,9 +11,10 @@ export class Chunk {
 	cy: number;
 	cz: number;
 	voxels: Uint8Array;
-	meshGroup?: { meshes: THREE.Mesh[]; dispose: () => void };
+	meshes?: THREE.Mesh[];
 	scene: THREE.Scene;
 	seed: number;
+	private buildingMesh: boolean = false;
 
 	constructor(scene: THREE.Scene, seed: number, cx: number, cy: number, cz: number) {
 		this.cx = cx;
@@ -25,16 +25,28 @@ export class Chunk {
 		this.voxels = new Uint8Array(CHUNK_SIZE ** 3);
 	}
 
+	requestRemesh() {
+		if (this.buildingMesh) return; // unikamy dublowania
+		this.buildingMesh = true;
+		this.buildMesh();
+	}
+
 	index(x: number, y: number, z: number): number {
 		return x + y * CHUNK_SIZE + z * CHUNK_SIZE * CHUNK_SIZE;
 	}
 
 	async buildMesh() {
+		this.buildingMesh = true;
+		await this._buildMesh(WorldManager.chunkManager.getHaloVoxels(this.cx, this.cy, this.cz));
+		this.buildingMesh = false;
+	}
+
+	private async _buildMesh(haloVoxels: Uint8Array) {
 		const { solid, transparent } = await GameManager.instance.mesherService.build(
-			this.voxels,
-			CHUNK_SIZE,
-			CHUNK_SIZE,
-			CHUNK_SIZE,
+			haloVoxels,
+			CHUNK_SIZE + 2 * HALO,
+			CHUNK_SIZE + 2 * HALO,
+			CHUNK_SIZE + 2 * HALO,
 			this.cx,
 			this.cy,
 			this.cz
@@ -72,10 +84,13 @@ export class Chunk {
 		this.meshes = meshes;
 	}
 
-	dispose(): void {
-		if (this.meshGroup) {
-			this.meshGroup.dispose();
-			this.meshGroup = undefined;
+	unload(): void {
+		if (this.meshes) {
+			for (const mesh of this.meshes) {
+				mesh.geometry.dispose();
+				this.scene.remove(mesh);
+			}
+			this.meshes = undefined;
 		}
 	}
 }
