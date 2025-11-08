@@ -4,6 +4,9 @@ import { GameManager } from '$lib/game/GameManger';
 import { textureAtlas } from '$lib/game/textures/textureAtlas';
 import * as THREE from 'three';
 import { WorldManager } from '../WorldManager';
+import { Debug } from '$lib/debug/Debug';
+import { DebugType } from '$lib/debug/DebugType';
+import { DebugLevel } from '$lib/debug/DebugLevel';
 
 export class Chunk {
 	//TODO: add cashed borders voxels for meshing optimization
@@ -14,7 +17,12 @@ export class Chunk {
 	meshes?: THREE.Mesh[];
 	scene: THREE.Scene;
 	seed: number;
-	private buildingMesh: boolean = false;
+
+	private buildingMesh = false; // czy aktualnie trwa budowa
+	private queued = false; // czy ktoś poprosił o kolejny remesh w trakcie budowy
+	private token = 0; // rośnie przy każdym requestRemesh()
+	private debounceMs = 50; // miękki debounce (możesz ustawić na 0, by wyłączyć)
+	private lastRequestAt = 0;
 
 	constructor(scene: THREE.Scene, seed: number, cx: number, cy: number, cz: number) {
 		this.cx = cx;
@@ -26,22 +34,41 @@ export class Chunk {
 	}
 
 	requestRemesh() {
-		if (this.buildingMesh) return; // unikamy dublowania
-		this.buildingMesh = true;
-		this.buildMesh();
+		const now = performance.now?.() ?? Date.now();
+		const withinDebounce = now - this.lastRequestAt < this.debounceMs;
+		this.lastRequestAt = now;
+
+		this.token++; // nadajemy nowy „numer wersji” remeshu
+		if (this.buildingMesh) {
+			// już w toku -> tylko zaznacz, że po skończeniu mamy zrobić raz jeszcze
+			this.queued = true;
+			return;
+		}
+		if (withinDebounce) {
+			// zbyt gęsto -> poczekaj do zakończenia obecnej rundy
+			this.queued = true;
+			return;
+		}
+		this.startBuildMesh(this.token);
 	}
 
 	index(x: number, y: number, z: number): number {
 		return x + y * CHUNK_SIZE + z * CHUNK_SIZE * CHUNK_SIZE;
 	}
 
-	async buildMesh() {
+	async startBuildMesh(expectedToken: number) {
 		this.buildingMesh = true;
-		await this._buildMesh(WorldManager.chunkManager.getHaloVoxels(this.cx, this.cy, this.cz));
-		this.buildingMesh = false;
+		Debug.log(
+			DebugType.CHUNK,
+			DebugLevel.DEBUG,
+			`Budowanie meshu dla chunku ${this.cx},${this.cy},${this.cz}`
+		);
+		await this._buildMesh(expectedToken);
 	}
 
-	private async _buildMesh(haloVoxels: Uint8Array) {
+	private async _buildMesh(expectedToken: number) {
+		const haloVoxels = WorldManager.chunkManager.getHaloVoxels(this.cx, this.cy, this.cz);
+
 		const { solid, transparent } = await GameManager.instance.mesherService.build(
 			haloVoxels,
 			CHUNK_SIZE + 2 * HALO,
@@ -51,6 +78,30 @@ export class Chunk {
 			this.cy,
 			this.cz
 		);
+
+		if (expectedToken !== this.token) {
+			Debug.log(
+				DebugType.CHUNK,
+				DebugLevel.DEBUG,
+				`DROP wynik dla chunku ${this.cx},${this.cy},${this.cz} t=${expectedToken} != cur=${this.token}`
+			);
+			this.buildingMesh = false;
+			// jeśli ktoś kliknął „queued” w międzyczasie – odpal natychmiast następną, ale z aktualnym tokenem
+			if (this.queued) {
+				this.queued = false;
+				this.startBuildMesh(this.token);
+			}
+			return;
+		}
+
+		if (this.meshes) {
+			for (const mesh of this.meshes) {
+				mesh.geometry.dispose();
+				this.scene.remove(mesh);
+				// UWAGA: jeśli materiał nie jest współdzielony, rozważ też mesh.material.dispose()
+			}
+			this.meshes = undefined;
+		}
 
 		const meshes: THREE.Mesh[] = [];
 
@@ -82,9 +133,21 @@ export class Chunk {
 		);
 
 		this.meshes = meshes;
+		Debug.log(
+			DebugType.CHUNK,
+			DebugLevel.DEBUG,
+			`Skonczono budowanie meshu dla chunku ${this.cx},${this.cy},${this.cz}`
+		);
+		if (this.queued) {
+			this.queued = false;
+			// nie zwiększamy tokena – już został zwiększony w requestRemesh(); bierzemy aktualny
+			this.startBuildMesh(this.token);
+		}
 	}
 
 	unload(): void {
+		this.token++;
+		this.queued = false;
 		if (this.meshes) {
 			for (const mesh of this.meshes) {
 				mesh.geometry.dispose();
