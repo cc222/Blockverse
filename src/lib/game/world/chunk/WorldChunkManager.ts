@@ -135,6 +135,11 @@ export class WorldChunkManager {
 
 	enqueueRemesh(chunk: Chunk, token: number) {
 		const key = this.getChunkKey(chunk.cx, chunk.cy, chunk.cz);
+		if (!this.neighborsReady(chunk.cx, chunk.cy, chunk.cz)) {
+			chunk.needsRemesh = true; // zapamiętaj, że trzeba będzie przebudować
+			Debug.log(DebugType.WORLD, DebugLevel.DEBUG, 'Remesh deferred (neighbors missing)', { key });
+			return;
+		}
 		if (this.inFlight.has(key)) {
 			chunk.needsRemesh = true;
 			Debug.log(DebugType.WORLD, DebugLevel.DEBUG, 'Remesh skipped (in flight)', { key });
@@ -159,6 +164,56 @@ export class WorldChunkManager {
 					break;
 				}
 			}
+		}
+	}
+
+	private neighborsReady(cx: number, cy: number, cz: number): boolean {
+		for (const [dx, dy, dz] of WorldChunkManager.neighborDirs) {
+			const nk = this.getChunkKey(cx + dx, cy + dy, cz + dz);
+			const n = this.chunks.get(nk);
+			if (!n || !n.voxels) return false;
+		}
+		return true;
+	}
+
+	private tryQueueRemesh(c: Chunk): boolean {
+		const key = this.getChunkKey(c.cx, c.cy, c.cz);
+
+		if (!c.voxels) return false;
+		if (!this.neighborsReady(c.cx, c.cy, c.cz)) return false;
+		if (this.inFlight.has(key) || this.queued.has(key)) return false;
+
+		const needs = !c.meshes || c.needsRemesh; // jeśli masz taki znacznik; inaczej wystarczy !c.meshes || c.needsRemesh
+		if (!needs) return false;
+
+		this.enqueueRemesh(c, c.currentToken());
+		return true;
+	}
+
+	// Po załadowaniu chunku „kopnij” lokalny obszar (self + 6 sąsiadów).
+	// Opcjonalny limit zabezpiecza budżet zleceń w jednej klatce.
+	private kickLocalMeshing(cx: number, cy: number, cz: number, limit = 7) {
+		const candidates: string[] = [this.getChunkKey(cx, cy, cz)];
+		for (const [dx, dy, dz] of WorldChunkManager.neighborDirs) {
+			candidates.push(this.getChunkKey(cx + dx, cy + dy, cz + dz));
+		}
+
+		let queued = 0;
+		for (const key of candidates) {
+			const ch = this.chunks.get(key);
+			if (!ch) continue;
+			if (this.tryQueueRemesh(ch)) {
+				queued++;
+				if (queued >= limit) break;
+			}
+		}
+
+		if (queued > 0) {
+			Debug.log(DebugType.WORLD, DebugLevel.DEBUG, 'Local meshing kick', {
+				source: `${cx},${cy},${cz}`,
+				queued
+			});
+			this.schedulePump(); // odpal przetwarzanie kolejki ASAP
 		}
 	}
 
@@ -188,6 +243,12 @@ export class WorldChunkManager {
 			if (!current || current !== chunk) {
 				skipped++;
 				Debug.log(DebugType.WORLD, DebugLevel.DEBUG, 'Job skipped (chunk unloaded)', { key });
+				continue;
+			}
+			if (!this.neighborsReady(chunk.cx, chunk.cy, chunk.cz)) {
+				skipped++;
+				chunk.needsRemesh = true; // spróbujemy ponownie, gdy warunek się domknie
+				Debug.log(DebugType.WORLD, DebugLevel.DEBUG, 'Job deferred (neighbors changed)', { key });
 				continue;
 			}
 			if (this.inFlight.has(key)) {
@@ -400,8 +461,7 @@ export class WorldChunkManager {
 				Debug.log(DebugType.WORLD, DebugLevel.DEBUG, 'Chunk unloaded before remesh', { key });
 				return;
 			}
-			chunk.requestRemesh();
-			this.remeshNeighbors(cx, cy, cz);
+			this.kickLocalMeshing(cx, cy, cz);
 			Debug.log(DebugType.WORLD, DebugLevel.INFO, 'Chunk loaded', {
 				key,
 				timeMs: elapsed.toFixed(2),
@@ -414,25 +474,6 @@ export class WorldChunkManager {
 			});
 		} finally {
 			this.loadingChunks.delete(key);
-		}
-	}
-
-	private remeshNeighbors(cx: number, cy: number, cz: number) {
-		let remeshed = 0;
-		for (const [dx, dy, dz] of WorldChunkManager.neighborDirs) {
-			const neighborKey = this.getChunkKey(cx + dx, cy + dy, cz + dz);
-			const neighborChunk = this.chunks.get(neighborKey);
-			// Only remesh if neighbor has a mesh already (not first-time loading)
-			if (neighborChunk && neighborChunk.voxels) {
-				remeshed++;
-				neighborChunk.requestRemesh();
-			}
-		}
-		if (remeshed > 0) {
-			Debug.log(DebugType.WORLD, DebugLevel.DEBUG, 'Neighbors queued for remesh', {
-				source: `${cx},${cy},${cz}`,
-				count: remeshed
-			});
 		}
 	}
 
@@ -455,7 +496,6 @@ export class WorldChunkManager {
 		chunk.needsRemesh = false;
 		chunk.unload();
 		this.chunks.delete(key);
-		this.remeshNeighbors(chunk.cx, chunk.cy, chunk.cz);
 	}
 
 	disposeAll() {
