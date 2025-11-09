@@ -3,7 +3,6 @@ import { StatsOverlayManager } from './StatsOverlayManager';
 import { createTextureAtlas } from './textures/textureAtlas';
 import { ThreeManager } from './ThreeManager';
 import { MesherService } from './world/chunk/MesherService';
-import type { Mesher } from './world/mesher';
 import { WorldManager } from './world/WorldManager';
 
 export class GameManager {
@@ -58,6 +57,7 @@ export class GameManager {
 		return () => {
 			window.removeEventListener('resize', this.onResize);
 			ThreeManager.renderer.dispose();
+			WorldManager.chunkManager.disposeAll();
 		};
 	}
 

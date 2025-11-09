@@ -46,6 +46,8 @@ export class WorldChunkManager {
 	});
 	private transpMat = new THREE.MeshStandardMaterial({
 		color: 0x80c0ff,
+		side: THREE.DoubleSide,
+		depthWrite: false,
 		transparent: true,
 		opacity: 0.6,
 		flatShading: true,
@@ -134,6 +136,7 @@ export class WorldChunkManager {
 	enqueueRemesh(chunk: Chunk, token: number) {
 		const key = this.getChunkKey(chunk.cx, chunk.cy, chunk.cz);
 		if (this.inFlight.has(key)) {
+			chunk.needsRemesh = true;
 			Debug.log(DebugType.WORLD, DebugLevel.DEBUG, 'Remesh skipped (in flight)', { key });
 			return;
 		}
@@ -157,7 +160,6 @@ export class WorldChunkManager {
 				}
 			}
 		}
-		this.schedulePump();
 	}
 
 	private pumpQueue() {
@@ -216,7 +218,9 @@ export class WorldChunkManager {
 
 					const meshes: THREE.Mesh[] = [];
 					const mk = (data: MeshData, material: THREE.Material) => {
-						if (!data || data.positions.length === 0) return;
+						if (!data || data.positions.length === 0) {
+							return;
+						}
 						const g = new THREE.BufferGeometry();
 						g.setAttribute('position', new THREE.Float32BufferAttribute(data.positions, 3));
 						g.setAttribute('normal', new THREE.Float32BufferAttribute(data.normals, 3));
@@ -244,6 +248,7 @@ export class WorldChunkManager {
 							}
 						);
 						meshes.forEach((m) => m.geometry.dispose());
+						this.inFlight.delete(key);
 						return;
 					}
 
@@ -262,7 +267,10 @@ export class WorldChunkManager {
 				})
 				.finally(() => {
 					this.inFlight.delete(key);
-					if (this.queue.length) this.schedulePump();
+					if (chunk.needsRemesh) {
+						chunk.needsRemesh = false;
+						chunk.requestRemesh(); // Zlecić ponownie
+					}
 				});
 
 			budget--;
@@ -384,6 +392,14 @@ export class WorldChunkManager {
 			const chunk = new Chunk(this.scene, this.seed, cx, cy, cz);
 			chunk.voxels = new Uint8Array(voxels);
 			this.chunks.set(key, chunk);
+			// ✅ WAŻNE: Poczekaj na następną klatkę przed remeshem
+			// aby upewnić się, że wszystkie dane są gotowe
+			await new Promise((resolve) => requestAnimationFrame(resolve));
+			// ✅ Sprawdź ponownie czy chunk nadal istnieje
+			if (!this.chunks.has(key)) {
+				Debug.log(DebugType.WORLD, DebugLevel.DEBUG, 'Chunk unloaded before remesh', { key });
+				return;
+			}
 			chunk.requestRemesh();
 			this.remeshNeighbors(cx, cy, cz);
 			Debug.log(DebugType.WORLD, DebugLevel.INFO, 'Chunk loaded', {
@@ -407,7 +423,7 @@ export class WorldChunkManager {
 			const neighborKey = this.getChunkKey(cx + dx, cy + dy, cz + dz);
 			const neighborChunk = this.chunks.get(neighborKey);
 			// Only remesh if neighbor has a mesh already (not first-time loading)
-			if (neighborChunk) {
+			if (neighborChunk && neighborChunk.voxels) {
 				remeshed++;
 				neighborChunk.requestRemesh();
 			}
@@ -436,6 +452,7 @@ export class WorldChunkManager {
 		this.inFlight.delete(key);
 		this.loadingChunks.delete(key);
 
+		chunk.needsRemesh = false;
 		chunk.unload();
 		this.chunks.delete(key);
 		this.remeshNeighbors(chunk.cx, chunk.cy, chunk.cz);

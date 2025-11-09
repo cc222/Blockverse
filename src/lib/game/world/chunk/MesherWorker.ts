@@ -111,7 +111,11 @@ expose({
 						else neighbor = voxels[index(nx, ny, nz)];
 
 						const ndef = Block.getDef(neighbor as BlockId);
-						if (neighbor === 0 || ndef.transparent) {
+						const shouldRender =
+							neighbor === 0 ||
+							(ndef.transparent && neighbor !== blockId) ||
+							(blockId === BlockId.Water && neighbor === 0); // wyjątek dla wody
+						if (shouldRender) {
 							const vtx = faceVerts[f];
 
 							const uvRect = blockUVs[blockId] || { x: 0, y: 0, z: 1, w: 1 };

@@ -82,4 +82,4 @@ export class Debug {
 		console.log(`${color}${prefix}\x1b[0m`, message, ...data);
 	}
 }
-Debug.setLevel(DebugLevel.DEBUG); // domyślny poziom globalny
+Debug.setLevel(DebugLevel.ERROR); // domyślny poziom globalny

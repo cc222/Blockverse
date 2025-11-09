@@ -14,6 +14,7 @@ export class Chunk {
 	meshes?: THREE.Mesh[];
 	scene: THREE.Scene;
 	seed: number;
+	needsRemesh: boolean = false;
 
 	private token = 0; // rośnie przy każdym requestRemesh()
 
