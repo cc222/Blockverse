@@ -4,6 +4,9 @@ import { Chunk } from './Chunk';
 import { CHUNK_SIZE, HALO } from '$lib/game/GameConts';
 import { textureAtlas } from '$lib/game/textures/textureAtlas';
 import type { MeshData } from './MeshData';
+import { Debug } from '$lib/debug/Debug';
+import { DebugLevel } from '$lib/debug/DebugLevel';
+import { DebugType } from '$lib/debug/DebugType';
 type Job = { key: string; chunk: Chunk; token: number; priority: number };
 export class WorldChunkManager {
 	private scene: THREE.Scene;
@@ -15,12 +18,23 @@ export class WorldChunkManager {
 	private lastPlayerChunkY: number = 0;
 
 	private readonly viewDistance = 10; // liczba chunków w promieniu
+	private readonly viewDistSq = this.viewDistance * this.viewDistance;
 	private chunks = new Map<string, Chunk>();
 
 	private queue: Job[] = [];
 	private queued = new Set<string>();
 	private inFlight = new Set<string>();
-	private readonly REMESH_BUDGET = 2;
+	private loadingChunks = new Set<string>();
+	private readonly REMESH_BUDGET = 10;
+
+	private static readonly neighborDirs = [
+		[-1, 0, 0],
+		[1, 0, 0],
+		[0, -1, 0],
+		[0, 1, 0],
+		[0, 0, -1],
+		[0, 0, 1]
+	] as const;
 
 	private _pumpScheduled = false;
 	private playerPos = new THREE.Vector3();
@@ -57,50 +71,88 @@ export class WorldChunkManager {
 		const cz = Math.floor(playerPos.z / CHUNK_SIZE);
 		const cy = Math.floor(playerPos.y / CHUNK_SIZE);
 
-		if (
-			this.lastPlayerChunkX === cx &&
-			this.lastPlayerChunkZ === cz &&
-			this.lastPlayerChunkY === cy
-		) {
-			return; // brak zmiany chunku
-		} else {
+		const hasMoved =
+			this.lastPlayerChunkX !== cx || this.lastPlayerChunkZ !== cz || this.lastPlayerChunkY !== cy;
+
+		if (hasMoved) {
+			Debug.log(DebugType.WORLD, DebugLevel.DEBUG, 'Player moved to new chunk', {
+				from: `${this.lastPlayerChunkX},${this.lastPlayerChunkY},${this.lastPlayerChunkZ}`,
+				to: `${cx},${cy},${cz}`
+			});
+			this.lastPlayerChunkX = cx;
+			this.lastPlayerChunkZ = cz;
+			this.lastPlayerChunkY = cy;
+			// ✅ Reprioritize existing queue
+			const queueSize = this.queue.length;
+			for (const job of this.queue) {
+				job.priority = this.priorityFor(job.chunk);
+			}
+			if (queueSize > 0) {
+				Debug.log(DebugType.WORLD, DebugLevel.DEBUG, 'Reprioritized queue', {
+					queueSize: queueSize
+				});
+			}
 			const needed = new Set<string>();
+			let chunksToLoad = 0;
+
 			for (let x = -this.viewDistance; x <= this.viewDistance; x++) {
 				for (let y = -this.viewDistance; y <= this.viewDistance; y++) {
 					for (let z = -this.viewDistance; z <= this.viewDistance; z++) {
+						// Spherical check
+						const distSq = x * x + y * y + z * z;
+						if (distSq > this.viewDistSq) continue;
+
 						const key = this.getChunkKey(cx + x, cy + y, cz + z);
 						needed.add(key);
 						if (!this.chunks.has(key)) {
+							chunksToLoad++;
 							this.loadChunk(cx + x, cy + y, cz + z);
 						}
 					}
 				}
 			}
 			// usuń chunki poza zasięgiem
+			let chunksUnloaded = 0;
 			for (const key of this.chunks.keys()) {
 				if (!needed.has(key)) {
+					chunksUnloaded++;
 					this.unloadChunk(key);
 				}
 			}
+			if (chunksToLoad > 0 || chunksUnloaded > 0) {
+				Debug.log(DebugType.WORLD, DebugLevel.INFO, 'Chunk load/unload', {
+					loaded: chunksToLoad,
+					unloaded: chunksUnloaded,
+					totalChunks: this.chunks.size,
+					queueSize: this.queue.length
+				});
+			}
 		}
-		this.lastPlayerChunkX = cx;
-		this.lastPlayerChunkZ = cz;
-		this.lastPlayerChunkY = cy;
+		this.schedulePump();
 	}
 
 	enqueueRemesh(chunk: Chunk, token: number) {
 		const key = this.getChunkKey(chunk.cx, chunk.cy, chunk.cz);
-		if (this.inFlight.has(key)) return;
-
-		if (!this.queued.has(key)) {
+		if (this.inFlight.has(key)) {
+			Debug.log(DebugType.WORLD, DebugLevel.DEBUG, 'Remesh skipped (in flight)', { key });
+			return;
+		}
+		const wasQueued = this.queued.has(key);
+		if (!wasQueued) {
 			this.queued.add(key);
 			this.queue.push({ key, chunk, token, priority: this.priorityFor(chunk) });
+			Debug.log(DebugType.WORLD, DebugLevel.DEBUG, 'Chunk queued for remesh', {
+				key,
+				priority: this.priorityFor(chunk),
+				queueSize: this.queue.length
+			});
 		} else {
 			// odśwież istniejący wpis (token + priority)
 			for (let i = 0; i < this.queue.length; i++) {
 				if (this.queue[i].key === key) {
 					this.queue[i].token = token;
 					this.queue[i].priority = this.priorityFor(chunk);
+					Debug.log(DebugType.WORLD, DebugLevel.DEBUG, 'Chunk remesh updated', { key });
 					break;
 				}
 			}
@@ -109,28 +161,58 @@ export class WorldChunkManager {
 	}
 
 	private pumpQueue() {
-		this.queue.sort((a, b) => a.priority - b.priority);
+		if (this.queue.length === 0) return;
+		const startTime = performance.now();
+		Debug.log(DebugType.WORLD, DebugLevel.DEBUG, 'Pump queue started', {
+			queueSize: this.queue.length,
+			inFlight: this.inFlight.size
+		});
+		// Only sort if queue changed significantly, or use priority queue data structure
+		if (this.queue.length > 10) {
+			this.queue.sort((a, b) => a.priority - b.priority);
+		}
 
 		let budget = this.REMESH_BUDGET;
+		let processed = 0;
+		let skipped = 0;
+
 		while (budget > 0 && this.queue.length) {
 			const job = this.queue.shift()!;
-			console.log('rendering poitiry: ', job.priority);
 			const { key, token, chunk } = job;
 			this.queued.delete(key);
 
 			// jeśli w mapie nie ma już TEGO samego obiektu, porzuć joba
 			const current = this.chunks.get(key);
 			if (!current || current !== chunk) {
+				skipped++;
+				Debug.log(DebugType.WORLD, DebugLevel.DEBUG, 'Job skipped (chunk unloaded)', { key });
 				continue;
 			}
-			if (this.inFlight.has(key)) continue;
+			if (this.inFlight.has(key)) {
+				skipped++;
+				continue;
+			}
 
 			this.inFlight.add(key);
+			processed++;
+
+			Debug.log(DebugType.WORLD, DebugLevel.DEBUG, 'Building mesh for chunk', {
+				key,
+				priority: job.priority.toFixed(2),
+				token
+			});
 
 			chunk
 				.buildMeshData()
 				.then(({ solid, transparent }: { solid: MeshData; transparent: MeshData }) => {
-					if (token !== chunk.currentToken()) return; // DROP przestarzałe
+					if (token !== chunk.currentToken()) {
+						Debug.log(DebugType.WORLD, DebugLevel.DEBUG, 'Mesh dropped (stale token)', {
+							key,
+							expectedToken: chunk.currentToken(),
+							actualToken: token
+						});
+						return;
+					}
 
 					const meshes: THREE.Mesh[] = [];
 					const mk = (data: MeshData, material: THREE.Material) => {
@@ -150,7 +232,33 @@ export class WorldChunkManager {
 					mk(solid, this.solidMat);
 					mk(transparent, this.transpMat);
 
+					// Check if chunk still exists before applying
+					if (!this.chunks.has(key) || this.chunks.get(key) !== chunk) {
+						// Cleanup geometries
+						Debug.log(
+							DebugType.WORLD,
+							DebugLevel.WARN,
+							'Mesh dropped (chunk unloaded during build)',
+							{
+								key
+							}
+						);
+						meshes.forEach((m) => m.geometry.dispose());
+						return;
+					}
+
 					chunk.applyMesh(meshes);
+					Debug.log(DebugType.WORLD, DebugLevel.DEBUG, 'Mesh applied successfully', {
+						key,
+						solidVertices: solid?.positions.length / 3 || 0,
+						transparentVertices: transparent?.positions.length / 3 || 0
+					});
+				})
+				.catch((error) => {
+					Debug.log(DebugType.WORLD, DebugLevel.ERROR, 'Mesh building failed', {
+						key,
+						error: error.message
+					});
 				})
 				.finally(() => {
 					this.inFlight.delete(key);
@@ -159,18 +267,37 @@ export class WorldChunkManager {
 
 			budget--;
 		}
+		const elapsed = performance.now() - startTime;
+		if (processed > 0 || skipped > 0) {
+			Debug.log(DebugType.WORLD, DebugLevel.INFO, 'Pump queue completed', {
+				processed,
+				skipped,
+				remaining: this.queue.length,
+				timeMs: elapsed.toFixed(2)
+			});
+		}
+
+		if (elapsed > 5) {
+			Debug.log(DebugType.WORLD, DebugLevel.WARN, 'Pump queue slow', {
+				timeMs: elapsed.toFixed(2),
+				processed
+			});
+		}
 	}
 
 	private priorityFor(c: Chunk): number {
-		const center = new THREE.Vector3(
-			c.cx * CHUNK_SIZE + CHUNK_SIZE * 0.5,
-			c.cy * CHUNK_SIZE + CHUNK_SIZE * 0.5,
-			c.cz * CHUNK_SIZE + CHUNK_SIZE * 0.5
-		);
-		const d2 = center.distanceToSquared(this.playerPos);
-		// preferuj chunki bez mesha (pierwszy render) – mniejsza priority-wartość = wcześniej
-		const firstRenderBonus = c.meshes ? 1000 : 0;
-		return d2 + firstRenderBonus;
+		// Avoid Vector3 allocation
+		const centerX = c.cx * CHUNK_SIZE + CHUNK_SIZE * 0.5;
+		const centerY = c.cy * CHUNK_SIZE + CHUNK_SIZE * 0.5;
+		const centerZ = c.cz * CHUNK_SIZE + CHUNK_SIZE * 0.5;
+
+		const dx = centerX - this.playerPos.x;
+		const dy = centerY - this.playerPos.y;
+		const dz = centerZ - this.playerPos.z;
+		const d2 = dx * dx + dy * dy + dz * dz;
+
+		const penalty = c.meshes ? CHUNK_SIZE * CHUNK_SIZE * 100 : 0;
+		return d2 + penalty;
 	}
 
 	private schedulePump() {
@@ -183,6 +310,8 @@ export class WorldChunkManager {
 	}
 
 	getHaloVoxels(cx: number, cy: number, cz: number): Uint8Array {
+		const startTime = performance.now();
+
 		const sizeWithHalo = CHUNK_SIZE + 2 * HALO;
 		const haloVoxels = new Uint8Array(sizeWithHalo ** 3);
 
@@ -218,45 +347,105 @@ export class WorldChunkManager {
 			}
 		}
 
+		const elapsed = performance.now() - startTime;
+		if (elapsed > 2) {
+			Debug.log(DebugType.WORLD, DebugLevel.WARN, 'Halo generation slow', {
+				key: `${cx},${cy},${cz}`,
+				timeMs: elapsed.toFixed(2)
+			});
+		}
+
 		return haloVoxels;
 	}
-	neighborDirs = [
-		[-1, 0, 0],
-		[1, 0, 0],
-		[0, -1, 0],
-		[0, 1, 0],
-		[0, 0, -1],
-		[0, 0, 1]
-	];
 	private async loadChunk(cx: number, cy: number, cz: number) {
 		const key = this.getChunkKey(cx, cy, cz);
 
-		// 1️⃣ Pobierz dane voxelowe z generatora / serwisu
-		const voxels = await this.chunkService.generateChunk(cx, cy, cz, this.seed);
-		const chunk = new Chunk(this.scene, this.seed, cx, cy, cz);
-		chunk.voxels = new Uint8Array(voxels);
-		this.chunks.set(key, chunk);
-		chunk.requestRemesh();
-		this.remeshNeighbors(cx, cy, cz);
+		if (this.loadingChunks.has(key)) {
+			Debug.log(DebugType.WORLD, DebugLevel.DEBUG, 'Chunk already loading', { key });
+			return;
+		} // Already loading
+		this.loadingChunks.add(key);
+		Debug.log(DebugType.WORLD, DebugLevel.DEBUG, 'Loading chunk', { key });
+
+		try {
+			const startTime = performance.now();
+			const voxels = await this.chunkService.generateChunk(cx, cy, cz, this.seed);
+			const elapsed = performance.now() - startTime;
+
+			// Check if still needed
+			if (this.chunks.has(key) || !this.loadingChunks.has(key)) {
+				Debug.log(DebugType.WORLD, DebugLevel.DEBUG, 'Chunk load cancelled', {
+					key,
+					reason: this.chunks.has(key) ? 'already loaded' : 'was unloaded'
+				});
+				return; // Was unloaded or duplicate
+			}
+
+			const chunk = new Chunk(this.scene, this.seed, cx, cy, cz);
+			chunk.voxels = new Uint8Array(voxels);
+			this.chunks.set(key, chunk);
+			chunk.requestRemesh();
+			this.remeshNeighbors(cx, cy, cz);
+			Debug.log(DebugType.WORLD, DebugLevel.INFO, 'Chunk loaded', {
+				key,
+				timeMs: elapsed.toFixed(2),
+				voxelCount: voxels.length
+			});
+		} catch (error) {
+			Debug.log(DebugType.WORLD, DebugLevel.ERROR, 'Chunk loading failed', {
+				key,
+				error: error instanceof Error ? error.message : String(error)
+			});
+		} finally {
+			this.loadingChunks.delete(key);
+		}
 	}
 
 	private remeshNeighbors(cx: number, cy: number, cz: number) {
-		for (const [dx, dy, dz] of this.neighborDirs) {
+		let remeshed = 0;
+		for (const [dx, dy, dz] of WorldChunkManager.neighborDirs) {
 			const neighborKey = this.getChunkKey(cx + dx, cy + dy, cz + dz);
 			const neighborChunk = this.chunks.get(neighborKey);
-			if (neighborChunk) requestAnimationFrame(() => neighborChunk.requestRemesh());
+			// Only remesh if neighbor has a mesh already (not first-time loading)
+			if (neighborChunk) {
+				remeshed++;
+				neighborChunk.requestRemesh();
+			}
+		}
+		if (remeshed > 0) {
+			Debug.log(DebugType.WORLD, DebugLevel.DEBUG, 'Neighbors queued for remesh', {
+				source: `${cx},${cy},${cz}`,
+				count: remeshed
+			});
 		}
 	}
 
 	private unloadChunk(key: string) {
 		const chunk = this.chunks.get(key);
 		if (!chunk) return;
+
+		Debug.log(DebugType.WORLD, DebugLevel.DEBUG, 'Unloading chunk', { key });
+
+		// Instead of filter, iterate and rebuild
+		const newQueue: Job[] = [];
+		for (const job of this.queue) {
+			if (job.key !== key) newQueue.push(job);
+		}
+		this.queue = newQueue;
+		this.queued.delete(key);
+		this.inFlight.delete(key);
+		this.loadingChunks.delete(key);
+
 		chunk.unload();
 		this.chunks.delete(key);
 		this.remeshNeighbors(chunk.cx, chunk.cy, chunk.cz);
 	}
 
 	disposeAll() {
+		Debug.log(DebugType.WORLD, DebugLevel.INFO, 'Disposing all chunks', {
+			totalChunks: this.chunks.size,
+			queueSize: this.queue.length
+		});
 		for (const chunk of this.chunks.values()) {
 			chunk.unload();
 		}
@@ -264,5 +453,7 @@ export class WorldChunkManager {
 		this.queue = [];
 		this.queued.clear();
 		this.inFlight.clear();
+		this.loadingChunks.clear();
+		Debug.log(DebugType.WORLD, DebugLevel.INFO, 'All chunks disposed');
 	}
 }

@@ -37,7 +37,7 @@ export class GameControlsManager extends THREE.EventDispatcher<GameControlsManag
 	moveRight = false;
 	moveUp = false;
 	moveDown = false;
-	speed = 5.0;
+	speed = 20.0;
 
 	private _boundKeyDown = (e: KeyboardEvent) => this.onKeyDown(e);
 	private _boundKeyUp = (e: KeyboardEvent) => this.onKeyUp(e);
