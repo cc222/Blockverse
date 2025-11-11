@@ -1,12 +1,15 @@
 import { LocalStorageManager } from '$lib/localStorge/LocalStorageManager';
+import type { MenuLocalStorageKeys } from '$lib/localStorge/menu/MenuLocalStorageKeys';
 
 export class MenuOption {
 	label: string;
 	action: (option?: string) => void;
-	selectedOptionIndex?: number = $state(undefined);
-	selectedOption?: string = $state(undefined);
+	selectedOptionIndex = $state<number | undefined>(undefined);
+	selectedOption = $state<string | undefined>(undefined);
 	options?: string[];
-	localStorageKey?: string;
+	localStorageKey: MenuLocalStorageKeys | undefined;
+	callActionOnLoadFromLocalStorage = true;
+	private loadedFromLocalStorage: boolean = false;
 
 	constructor({
 		label,
@@ -17,23 +20,29 @@ export class MenuOption {
 		label: string;
 		action: (option?: string) => void;
 		options?: string[];
-		localStorageKey?: string;
+		localStorageKey?: MenuLocalStorageKeys;
 	}) {
 		this.label = label;
 		this.action = action;
 		this.options = options;
+		this.localStorageKey = localStorageKey;
 		if (this.options?.length) {
 			this.selectedOptionIndex = 0;
 			this.selectedOption = this.options[this.selectedOptionIndex];
-			if (localStorageKey) {
-				this.localStorageKey = 'menuSetting_' + localStorageKey;
-				this.selectedOption = LocalStorageManager.getFromStorageOrDefault<string>(
-					this.localStorageKey,
-					this.options[0]
-				);
-				this.selectedOptionIndex = this.options.indexOf(this.selectedOption);
+		}
+	}
+
+	loadFromLocalStorage() {
+		if (this.options?.length && !this.loadedFromLocalStorage) {
+			this.selectedOption = LocalStorageManager.getFromStorageOrDefault<string>(
+				this.getLocalStorageKey(),
+				this.options[0]
+			);
+			this.selectedOptionIndex = this.options.indexOf(this.selectedOption);
+			if (this.callActionOnLoadFromLocalStorage) {
 				this.action(this.selectedOption);
 			}
+			this.loadedFromLocalStorage = true;
 		}
 	}
 
@@ -45,6 +54,10 @@ export class MenuOption {
 		}
 	}
 
+	private getLocalStorageKey(): string {
+		return 'menuSetting_' + this.localStorageKey;
+	}
+
 	changeSubOption(direction: 1 | -1) {
 		if (!this.options?.length) return;
 
@@ -52,6 +65,12 @@ export class MenuOption {
 		const next = ((this.selectedOptionIndex ?? 0) + direction + len) % len;
 		this.selectedOptionIndex = next;
 		this.selectedOption = this.options[next];
+		console.log('settking key ', this.localStorageKey);
+		console.log();
+		if (this.localStorageKey !== undefined) {
+			console.log('a');
+			LocalStorageManager.saveToStorage(this.getLocalStorageKey(), this.selectedOption);
+		}
 		this.action(this.selectedOption);
 	}
 }

@@ -4,7 +4,7 @@ type StatsPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 
 export class StatsOverlayManager {
 	private stats: Stats;
-	isEnabled = true;
+	isEnabled = false;
 	position: StatsPosition = 'top-left';
 
 	constructor() {

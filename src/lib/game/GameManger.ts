@@ -1,3 +1,5 @@
+import { InterfaceSettingMenu } from '$lib/components/menus/InterfaceSettingMenu';
+import { Menu } from '$lib/components/menus/Menu.svelte';
 import { GameControlsManager } from './GameControlsManager';
 import { StatsOverlayManager } from './StatsOverlayManager';
 import { createTextureAtlas } from './textures/textureAtlas';
@@ -50,6 +52,7 @@ export class GameManager {
 
 		this.controlsManager = new GameControlsManager(ThreeManager.camera);
 		this.statsOverlayManager = new StatsOverlayManager();
+		Menu.initializeStorageForMenu(InterfaceSettingMenu.instance);
 
 		this.prevFrameTime = performance.now();
 		this.loop();

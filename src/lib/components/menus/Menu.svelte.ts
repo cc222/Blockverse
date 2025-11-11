@@ -8,6 +8,12 @@ export class Menu {
 		'Użyj strzałek ↑↓ lub myszy do nawigacji • Enter lub kliknij aby wybrać • ESC aby wrócić';
 	menuOptions: MenuOption[] = $state([]);
 
+	static initializeStorageForMenu(menu: Menu) {
+		menu.menuOptions.forEach((option) => {
+			option.loadFromLocalStorage();
+		});
+	}
+
 	constructor({
 		menuOptions,
 		onMenuClose,
@@ -53,11 +59,14 @@ export class Menu {
 		this.menuOptions[this.selectedOption].action();
 	};
 	_bundForwardKeyDown = () => {
-		this.selectedOption =
-			(this.selectedOption - 1 + this.menuOptions.length) % this.menuOptions.length;
+		if (!this.menuOptions?.length) return;
+		const len = this.menuOptions.length;
+		this.selectedOption = (this.selectedOption - 1 + len) % len;
 	};
 	_boundDownKeyDown = () => {
-		this.selectedOption = (this.selectedOption + 1) % this.menuOptions.length;
+		if (!this.menuOptions?.length) return;
+		const len = this.menuOptions.length;
+		this.selectedOption = (this.selectedOption + 1) % len;
 	};
 
 	openMenu() {

@@ -1,10 +1,8 @@
 <script>
-	import { InterfaceSettingMenu } from './InterfaceSettingMenu';
 	import MenuComponent from './MenuComponent.svelte';
-	import { PauseMenu } from './PauseMenu';
-	import { SettingsMenu } from './SettingsMenu';
+	import { menus } from './MenuList';
 </script>
 
-<MenuComponent menu={PauseMenu.instance} />
-<MenuComponent menu={SettingsMenu.instance} />
-<MenuComponent menu={InterfaceSettingMenu.instance} />
+{#each menus as menu}
+	<MenuComponent {menu} />
+{/each}

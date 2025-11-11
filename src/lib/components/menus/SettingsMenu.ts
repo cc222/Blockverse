@@ -1,3 +1,4 @@
+import { GameManager } from '$lib/game/GameManger';
 import { InterfaceSettingMenu } from './InterfaceSettingMenu';
 import { Menu } from './Menu.svelte';
 import { MenuOption } from './MenuOption.svelte';
@@ -12,20 +13,21 @@ export class SettingsMenu {
 					new MenuOption({
 						label: 'Powrót do głownego menu',
 						action: () => {
-							PauseMenu.instance.exitMenu();
+							this.instance.exitMenu();
 						}
 					}),
 					new MenuOption({
 						label: 'Ustawienia interfejsu',
 						action: () => {
-							SettingsMenu.instance.closeMenu();
+							this.instance.closeMenu();
 							InterfaceSettingMenu.instance.openMenu();
 						}
 					}),
 					new MenuOption({
 						label: 'Wyjdź',
 						action: () => {
-							PauseMenu.instance.exitMenu();
+							this.instance.closeMenu();
+							GameManager.instance.controlsManager.EnterPointerLock();
 						}
 					})
 				],

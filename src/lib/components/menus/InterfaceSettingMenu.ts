@@ -1,4 +1,5 @@
 import { GameManager } from '$lib/game/GameManger';
+import { MenuLocalStorageKeys } from '$lib/localStorge/menu/MenuLocalStorageKeys';
 import { Menu } from './Menu.svelte';
 import { MenuOption } from './MenuOption.svelte';
 import { SettingsMenu } from './SettingsMenu';
@@ -11,51 +12,71 @@ export class InterfaceSettingMenu {
 		'Lewy Dolny róg ekranu': 'bottom-left',
 		'Prawy Dolny róg ekranu': 'bottom-right'
 	} as const;
-	private static fpsStatsOptions = [
-		new MenuOption({
-			label: 'Wyswietlaj licznik FPS w',
-			action: (option) => {
-				if (!option) return;
-				GameManager.instance.statsOverlayManager.position =
-					this.positionLabels[option as keyof typeof this.positionLabels];
-				GameManager.instance.statsOverlayManager.updateStyles();
-			},
-			options: [
-				'Lewy Górny róg ekranu',
-				'Prawy Górny róg ekranu',
-				'Lewy Dolny róg ekranu',
-				'Prawy Dolny róg ekranu'
-			]
-		})
-	];
 	static get instance(): Menu {
 		if (!this._instance) {
-			this._instance = new Menu({
-				menuOptions: [
+			{
+				const fpsStatsOptions = [
 					new MenuOption({
-						label: 'Wyswietlaj licznik FPS',
+						label: 'Wyswietlaj licznik FPS w',
 						action: (option) => {
-							if (option === 'Włączony') {
-								GameManager.instance.statsOverlayManager.isEnabled = true;
-								this._instance.menuOptions.push(...this.fpsStatsOptions);
-							} else {
-								GameManager.instance.statsOverlayManager.isEnabled = false;
-								this._instance.menuOptions = this._instance.menuOptions.filter(
-									(item) => !this.fpsStatsOptions.includes(item)
-								);
-							}
+							if (!option) return;
+							GameManager.instance.statsOverlayManager.position =
+								this.positionLabels[option as keyof typeof this.positionLabels];
 							GameManager.instance.statsOverlayManager.updateStyles();
 						},
-						options: ['Włączony', 'Wyłączony']
-					}),
-					...this.fpsStatsOptions
-					//{ label: 'Powrót do głownego menu', action: () => InterfaceSetting.instance.closeMenu() },
-					//{ label: 'Wyjdź', action: () => InterfaceSetting.instance.closeMenu() }
-				],
-				onMenuExit: () => {
-					SettingsMenu.instance.openMenu();
-				}
-			});
+						options: [
+							'Lewy Górny róg ekranu',
+							'Prawy Górny róg ekranu',
+							'Lewy Dolny róg ekranu',
+							'Prawy Dolny róg ekranu'
+						],
+						localStorageKey: MenuLocalStorageKeys.LocationOfFPS
+					})
+				];
+
+				this._instance = new Menu({
+					menuOptions: [
+						new MenuOption({
+							label: 'Powrót do ustawień',
+							action: () => {
+								this.instance.exitMenu();
+							}
+						}),
+						new MenuOption({
+							label: 'Wyswietlaj licznik FPS',
+							action: (option) => {
+								if (option === 'Włączony') {
+									GameManager.instance.statsOverlayManager.isEnabled = true;
+									this._instance.menuOptions.splice(2, 0, ...fpsStatsOptions);
+									for (const menu of fpsStatsOptions) {
+										menu.loadFromLocalStorage();
+									}
+								} else {
+									GameManager.instance.statsOverlayManager.isEnabled = false;
+									this._instance.menuOptions = this._instance.menuOptions.filter(
+										(item) => !fpsStatsOptions.includes(item)
+									);
+								}
+								GameManager.instance.statsOverlayManager.updateStyles();
+							},
+							options: ['Wyłączony', 'Włączony'],
+							localStorageKey: MenuLocalStorageKeys.IsShowFPS
+						}),
+						new MenuOption({
+							label: 'Wyjdź',
+							action: () => {
+								this.instance.closeMenu();
+								GameManager.instance.controlsManager.EnterPointerLock();
+							}
+						})
+						//{ label: 'Powrót do głownego menu', action: () => InterfaceSetting.instance.closeMenu() },
+						//{ label: 'Wyjdź', action: () => InterfaceSetting.instance.closeMenu() }
+					],
+					onMenuExit: () => {
+						SettingsMenu.instance.openMenu();
+					}
+				});
+			}
 		}
 		return this._instance;
 	}

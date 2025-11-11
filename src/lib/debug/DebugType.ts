@@ -4,5 +4,6 @@ export enum DebugType {
 	ENTITY = 'entity',
 	WORLD = 'world',
 	NETWORK = 'network',
+	LOCALSTORAGE = 'LocalStorage',
 	OTHER = 'other'
 }
