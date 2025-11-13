@@ -1,9 +1,9 @@
 <script lang="ts">
-	import Menus from '$lib/components/menus/Menus.svelte';
+	import MenusWrapper from '$lib/components/menus/MenusWrapper.svelte';
 	import ThreeScene from '$lib/components/ThreeScene.svelte';
 </script>
 
 <main>
 	<ThreeScene />
-	<Menus />
+	<MenusWrapper />
 </main>

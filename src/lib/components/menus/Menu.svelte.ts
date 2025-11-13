@@ -1,4 +1,5 @@
 import { GameManager } from '$lib/game/GameManger';
+import { MenuManager } from './MenuManager.svelte';
 import type { MenuOption } from './MenuOption.svelte';
 export class Menu {
 	showMenu = $state(false);
@@ -72,6 +73,7 @@ export class Menu {
 	openMenu() {
 		this.showMenu = true;
 		this.initListeners();
+		MenuManager.instance._openMenu(this);
 	}
 
 	initListeners() {
@@ -90,8 +92,11 @@ export class Menu {
 		controls.removeEventListener('downKeyDown', this._boundDownKeyDown);
 	}
 	closeMenu() {
-		this.showMenu = false;
-		this.disposeListeners();
-		this.onMenuClose?.();
+		if (this.showMenu) {
+			MenuManager.instance._closeActiveMenu();
+			this.showMenu = false;
+			this.disposeListeners();
+			this.onMenuClose?.();
+		}
 	}
 }

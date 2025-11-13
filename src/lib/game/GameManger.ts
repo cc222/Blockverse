@@ -1,5 +1,4 @@
-import { Menu } from '$lib/components/menus/Menu.svelte';
-import { menus } from '$lib/components/menus/MenuList';
+import { MenuManager } from '$lib/components/menus/MenuManager.svelte';
 import { GameControlsManager } from './GameControlsManager';
 import { StatsOverlayManager } from './StatsOverlayManager';
 import { createTextureAtlas } from './textures/textureAtlas';
@@ -15,6 +14,7 @@ export class GameManager {
 	prevFrameTime!: number;
 	gameCanvas!: HTMLCanvasElement;
 	mesherService!: MesherService;
+	menuManager!: MenuManager;
 	dispose: () => void = () => {};
 
 	private constructor(canvas: HTMLCanvasElement) {
@@ -50,11 +50,11 @@ export class GameManager {
 		ThreeManager.init(this.gameCanvas);
 		WorldManager.init();
 
+		this.menuManager = MenuManager.instance;
 		this.controlsManager = new GameControlsManager(ThreeManager.camera);
 		this.statsOverlayManager = new StatsOverlayManager();
-		for (const menu of menus) {
-			Menu.initializeStorageForMenu(menu);
-		}
+
+		this.menuManager.initializeAndLoadFromStorageAllMenus();
 
 		this.prevFrameTime = performance.now();
 		this.loop();
