@@ -60,6 +60,101 @@ export class WorldChunkManager {
 		this.chunkService = chunkService;
 	}
 
+	/**
+	 * Pobiera blok ze współrzędnych światowych
+	 */
+	getBlockAt(x: number, y: number, z: number): number {
+		const cx = Math.floor(x / CHUNK_SIZE);
+		const cy = Math.floor(y / CHUNK_SIZE);
+		const cz = Math.floor(z / CHUNK_SIZE);
+
+		const key = this.getChunkKey(cx, cy, cz);
+		const chunk = this.chunks.get(key);
+
+		if (!chunk) {
+			return -1;
+		}
+
+		if (!chunk.voxels) {
+			return 0; // air if chunk not loaded
+		}
+
+		const localX = x - cx * CHUNK_SIZE;
+		const localY = y - cy * CHUNK_SIZE;
+		const localZ = z - cz * CHUNK_SIZE;
+
+		return chunk.voxels[localX + localY * CHUNK_SIZE + localZ * CHUNK_SIZE * CHUNK_SIZE];
+	}
+
+	/**
+	 * Ustawia blok i automatycznie robi remesh
+	 */
+	setBlockAt(x: number, y: number, z: number, blockId: number): boolean {
+		const cx = Math.floor(x / CHUNK_SIZE);
+		const cy = Math.floor(y / CHUNK_SIZE);
+		const cz = Math.floor(z / CHUNK_SIZE);
+
+		const key = this.getChunkKey(cx, cy, cz);
+		const chunk = this.chunks.get(key);
+
+		if (!chunk || !chunk.voxels) {
+			Debug.log(DebugType.WORLD, DebugLevel.WARN, 'Cannot set block - chunk not loaded', {
+				worldPos: `${x},${y},${z}`,
+				chunkPos: `${cx},${cy},${cz}`
+			});
+			return false;
+		}
+
+		const localX = x - cx * CHUNK_SIZE;
+		const localY = y - cy * CHUNK_SIZE;
+		const localZ = z - cz * CHUNK_SIZE;
+
+		const index = localX + localY * CHUNK_SIZE + localZ * CHUNK_SIZE * CHUNK_SIZE;
+		const oldBlock = chunk.voxels[index];
+
+		if (oldBlock === blockId) {
+			return false; // No change needed
+		}
+
+		chunk.voxels[index] = blockId;
+
+		// Request remesh for this chunk
+		chunk.requestRemesh();
+
+		Debug.log(DebugType.WORLD, DebugLevel.DEBUG, 'Block changed', {
+			worldPos: `${x},${y},${z}`,
+			localPos: `${localX},${localY},${localZ}`,
+			chunkPos: `${cx},${cy},${cz}`,
+			oldBlock,
+			newBlock: blockId
+		});
+
+		// Remesh neighbors if block is on chunk boundary
+		if (localX === 0) this.remeshNeighbor(cx - 1, cy, cz);
+		if (localX === CHUNK_SIZE - 1) this.remeshNeighbor(cx + 1, cy, cz);
+		if (localY === 0) this.remeshNeighbor(cx, cy - 1, cz);
+		if (localY === CHUNK_SIZE - 1) this.remeshNeighbor(cx, cy + 1, cz);
+		if (localZ === 0) this.remeshNeighbor(cx, cy, cz - 1);
+		if (localZ === CHUNK_SIZE - 1) this.remeshNeighbor(cx, cy, cz + 1);
+
+		return true;
+	}
+
+	/**
+	 * Pomocnicza metoda do remeshu sąsiadów
+	 */
+	private remeshNeighbor(cx: number, cy: number, cz: number): void {
+		const key = this.getChunkKey(cx, cy, cz);
+		const chunk = this.chunks.get(key);
+
+		if (chunk && chunk.voxels) {
+			chunk.requestRemesh();
+			Debug.log(DebugType.WORLD, DebugLevel.DEBUG, 'Neighbor remesh requested', {
+				chunkPos: `${cx},${cy},${cz}`
+			});
+		}
+	}
+
 	getChunkKey(cx: number, cy: number, cz: number): string {
 		return `${cx},${cy},${cz}`;
 	}
@@ -70,8 +165,8 @@ export class WorldChunkManager {
 	update(playerPos: THREE.Vector3) {
 		this.playerPos.copy(playerPos);
 		const cx = Math.floor(playerPos.x / CHUNK_SIZE);
-		const cz = Math.floor(playerPos.z / CHUNK_SIZE);
 		const cy = Math.floor(playerPos.y / CHUNK_SIZE);
+		const cz = Math.floor(playerPos.z / CHUNK_SIZE);
 
 		const hasMoved =
 			this.lastPlayerChunkX !== cx || this.lastPlayerChunkZ !== cz || this.lastPlayerChunkY !== cy;

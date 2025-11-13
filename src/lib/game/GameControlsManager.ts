@@ -5,6 +5,7 @@ import { PauseMenu } from '$lib/components/menus/PauseMenu';
 import { Debug } from '$lib/debug/Debug';
 import { DebugType } from '$lib/debug/DebugType';
 import { DebugLevel } from '$lib/debug/DebugLevel';
+import { PhysicsManager } from './PhysicsManager';
 
 type GameControlEventName =
 	| 'unLock'
@@ -32,7 +33,7 @@ type GameControlsManagerEvents = {
 
 export class GameControlsManager extends THREE.EventDispatcher<GameControlsManagerEvents> {
 	controls: PointerLockControls;
-	velocity = new THREE.Vector3();
+	//velocity = new THREE.Vector3();
 	direction = new THREE.Vector3();
 	moveForward = false;
 	moveBackward = false;
@@ -40,8 +41,13 @@ export class GameControlsManager extends THREE.EventDispatcher<GameControlsManag
 	moveRight = false;
 	moveUp = false;
 	moveDown = false;
-	speed = 20.0;
 
+	// Physics-based movement
+	speed = 5.0; // Walking speed (reduced from 20.0)
+	sprintSpeed = 8.0; // Sprinting speed
+	isSprinting = false;
+
+	private physicsManager: PhysicsManager;
 	private notOpenPauseMenuOnPointerLockUnlock: boolean = false;
 
 	private _boundKeyDown = (e: KeyboardEvent) => this.onKeyDown(e);
@@ -68,6 +74,7 @@ export class GameControlsManager extends THREE.EventDispatcher<GameControlsManag
 	constructor(camera: THREE.PerspectiveCamera) {
 		super();
 		this.controls = new PointerLockControls(camera, GameManager.instance.gameCanvas);
+		this.physicsManager = new PhysicsManager();
 		this.initListeners();
 	}
 
@@ -177,11 +184,51 @@ export class GameControlsManager extends THREE.EventDispatcher<GameControlsManag
 		if (this.moveUp) this.direction.y += 1;
 		if (this.moveDown) this.direction.y -= 1;
 
-		this.direction.normalize();
+		if (this.direction.length() > 0) {
+			this.direction.normalize();
+		}
 
-		const moveSpeed = this.speed * delta;
-		this.controls.moveRight(this.direction.x * moveSpeed);
-		this.controls.moveForward(this.direction.z * moveSpeed);
-		this.controls.object.position.y += this.direction.y * moveSpeed;
+		// Transform direction to world space
+		const camera = this.controls.object;
+		const forward = new THREE.Vector3();
+		camera.getWorldDirection(forward);
+		forward.y = 0; // Keep movement horizontal
+		forward.normalize();
+
+		const right = new THREE.Vector3();
+		right.crossVectors(forward, camera.up).normalize();
+
+		const worldDirection = new THREE.Vector3();
+		worldDirection.addScaledVector(right, this.direction.x);
+		worldDirection.addScaledVector(forward, this.direction.z);
+
+		// Apply current speed (sprint or walk)
+		const currentSpeed = this.isSprinting ? this.sprintSpeed : this.speed;
+
+		// Update physics with horizontal movement direction
+		if (this.moveUp) {
+			this.physicsManager.jump();
+		}
+		this.physicsManager.update(delta, camera.position, worldDirection, currentSpeed);
+
+		// Debug info
+		const physicsState = this.physicsManager.getState();
+		if (delta > 0) {
+			Debug.log(DebugType.CONTROLS, DebugLevel.DEBUG, 'Player physics', {
+				position: `${camera.position.x.toFixed(2)}, ${camera.position.y.toFixed(2)}, ${camera.position.z.toFixed(2)}`,
+				velocity: `${physicsState.velocity.y.toFixed(2)}`,
+				grounded: physicsState.isGrounded,
+				sprinting: this.isSprinting
+			});
+		}
+	}
+
+	public getPosition(): THREE.Vector3 {
+		return this.controls.object.position;
+	}
+
+	public setPosition(x: number, y: number, z: number): void {
+		this.controls.object.position.set(x, y, z);
+		this.physicsManager.reset();
 	}
 }

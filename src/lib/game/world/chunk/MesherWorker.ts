@@ -136,9 +136,9 @@ expose({
 
 							for (let vi = 0; vi < 4; vi++) {
 								const [vx, vy, vz] = vtx[vi];
-								const worldX = (vx + x - HALO + chunkOffset.x - width / 2) * blockSize;
-								const worldY = (vy + y - HALO + chunkOffset.y) * blockSize;
-								const worldZ = (vz + z - HALO + chunkOffset.z - depth / 2) * blockSize;
+								const worldX = (vx + x - HALO + chunkOffset.x + 0.5) * blockSize;
+								const worldY = (vy + y - HALO + chunkOffset.y + 0.5) * blockSize;
+								const worldZ = (vz + z - HALO + chunkOffset.z + 0.5) * blockSize;
 								const [uu, vv] = quadUVs[vi];
 
 								target.positions.push(worldX, worldY, worldZ);
