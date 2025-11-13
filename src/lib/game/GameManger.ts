@@ -1,5 +1,5 @@
-import { InterfaceSettingMenu } from '$lib/components/menus/InterfaceSettingMenu';
 import { Menu } from '$lib/components/menus/Menu.svelte';
+import { menus } from '$lib/components/menus/MenuList';
 import { GameControlsManager } from './GameControlsManager';
 import { StatsOverlayManager } from './StatsOverlayManager';
 import { createTextureAtlas } from './textures/textureAtlas';
@@ -52,13 +52,16 @@ export class GameManager {
 
 		this.controlsManager = new GameControlsManager(ThreeManager.camera);
 		this.statsOverlayManager = new StatsOverlayManager();
-		Menu.initializeStorageForMenu(InterfaceSettingMenu.instance);
+		for (const menu of menus) {
+			Menu.initializeStorageForMenu(menu);
+		}
 
 		this.prevFrameTime = performance.now();
 		this.loop();
 
 		return () => {
 			window.removeEventListener('resize', this.onResize);
+			this.controlsManager.dispose();
 			ThreeManager.renderer.dispose();
 			WorldManager.chunkManager.disposeAll();
 		};

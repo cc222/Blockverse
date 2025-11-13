@@ -1,11 +1,11 @@
 import { GameManager } from '$lib/game/GameManger';
-import { DebugMenu } from './DebugMenu';
-import { InterfaceSettingMenu } from './InterfaceSettingMenu';
+import { setDebugAtlasIsEnabled } from '$lib/game/textures/textureAtlas';
+import { MenuLocalStorageKeys } from '$lib/localStorge/menu/MenuLocalStorageKeys';
 import { Menu } from './Menu.svelte';
 import { MenuOption } from './MenuOption.svelte';
-import { PauseMenu } from './PauseMenu';
+import { SettingsMenu } from './SettingsMenu';
 
-export class SettingsMenu {
+export class DebugMenu {
 	private static _instance: Menu;
 	static get instance(): Menu {
 		if (!this._instance) {
@@ -18,18 +18,16 @@ export class SettingsMenu {
 						}
 					}),
 					new MenuOption({
-						label: 'Ustawienia interfejsu',
-						action: () => {
-							this.instance.closeMenu();
-							InterfaceSettingMenu.instance.openMenu();
-						}
-					}),
-					new MenuOption({
-						label: 'Ustawienia debug',
-						action: () => {
-							this.instance.closeMenu();
-							DebugMenu.instance.openMenu();
-						}
+						label: 'Atlas texture',
+						action: (option) => {
+							if (option === 'Włączony') {
+								setDebugAtlasIsEnabled(true);
+							} else {
+								setDebugAtlasIsEnabled(false);
+							}
+						},
+						options: ['Wyłączony', 'Włączony'],
+						localStorageKey: MenuLocalStorageKeys.TextureAtlas
 					}),
 					new MenuOption({
 						label: 'Wyjdź',
@@ -40,7 +38,7 @@ export class SettingsMenu {
 					})
 				],
 				onMenuExit: () => {
-					PauseMenu.instance.openMenu();
+					SettingsMenu.instance.openMenu();
 				}
 			});
 		}

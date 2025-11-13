@@ -1,6 +1,9 @@
 import { spawn, Worker, Pool } from 'threads';
 import type { MeshBuffers } from './MeshBuffers';
 import { textureAtlas } from '$lib/game/textures/textureAtlas';
+import { Debug } from '$lib/debug/Debug';
+import { DebugType } from '$lib/debug/DebugType';
+import { DebugLevel } from '$lib/debug/DebugLevel';
 
 const POOL_SIZE = 6;
 
@@ -19,7 +22,12 @@ export class MesherService {
 		for (const [blockId, rect] of Object.entries(textureAtlas.uvs)) {
 			this.blockUVs[blockId] = { x: rect.x, y: rect.y, z: rect.z, w: rect.w };
 		}
-		console.log('MesherService initialized with block UVs:', this.blockUVs);
+		Debug.log(
+			DebugType.MESHER,
+			DebugLevel.DEBUG,
+			'MesherService initialized with block UVs:',
+			this.blockUVs
+		);
 	}
 
 	async build(

@@ -7,10 +7,11 @@ export interface TextureAtlas {
 }
 
 export let textureAtlas: TextureAtlas;
+export let atlasCanvas: HTMLCanvasElement;
 
 export async function createTextureAtlas(size = 16): Promise<TextureAtlas> {
 	const loader = new THREE.ImageLoader();
-	const atlasCanvas = document.createElement('canvas');
+	atlasCanvas = document.createElement('canvas');
 	const ctx = atlasCanvas.getContext('2d')!;
 	const blockCount = Block.defs.length;
 
@@ -46,14 +47,17 @@ export async function createTextureAtlas(size = 16): Promise<TextureAtlas> {
 	texture.magFilter = THREE.NearestFilter;
 	textureAtlas = { texture, uvs: uvs as Record<BlockId, THREE.Vector4> };
 	document.body.appendChild(atlasCanvas);
+	atlasCanvas.style.display = 'none';
 	atlasCanvas.style.border = '1px solid red';
 	atlasCanvas.style.position = 'absolute';
 	atlasCanvas.style.top = '10px';
 	atlasCanvas.style.left = '10px';
-	atlasCanvas.style.width = '256px'; // opcjonalnie skalowanie
-	atlasCanvas.style.height = '256px';
 
 	return textureAtlas;
+}
+
+export function setDebugAtlasIsEnabled(isEnabled: boolean) {
+	atlasCanvas.style.display = isEnabled ? 'block' : 'none';
 }
 
 function loadImage(loader: THREE.ImageLoader, path: string): Promise<HTMLImageElement> {

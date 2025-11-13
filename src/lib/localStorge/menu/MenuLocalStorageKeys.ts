@@ -1,4 +1,6 @@
 export enum MenuLocalStorageKeys {
+	//interface
 	IsShowFPS,
-	LocationOfFPS
+	LocationOfFPS,
+	TextureAtlas
 }

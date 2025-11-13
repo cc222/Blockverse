@@ -33,7 +33,7 @@ export class PauseMenu {
 					// }
 				],
 				onMenuExit: () => {
-					GameManager.instance.controlsManager.EnterPointerLock();
+					GameManager.instance.controlsManager.enterPointerLock();
 				}
 			});
 		}

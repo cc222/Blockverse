@@ -9,11 +9,11 @@ export class LocalStorageManager {
 		if (stored) {
 			initial = JSON.parse(stored);
 		}
-		Debug.log(DebugType.LOCALSTORAGE, DebugLevel.ERROR, 'getting ' + key + ' value: ' + initial);
+		Debug.log(DebugType.LOCALSTORAGE, DebugLevel.DEBUG, 'getting ' + key + ' value: ' + initial);
 		return initial;
 	}
 	static saveToStorage<T>(key: string, value: T) {
-		Debug.log(DebugType.LOCALSTORAGE, DebugLevel.ERROR, 'setting ' + key + ' value: ' + value);
+		Debug.log(DebugType.LOCALSTORAGE, DebugLevel.DEBUG, 'setting ' + key + ' value: ' + value);
 		localStorage.setItem(key, JSON.stringify(value));
 	}
 }
