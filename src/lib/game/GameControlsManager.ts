@@ -18,6 +18,8 @@ type GameControlEventName =
 	| 'downKeyUp'
 	| 'escapeKeyUp'
 	| 'enterKeyUp'
+	| 'attackKeyUp'
+	| 'interactKeyUp'
 	| 'forwardKeyDown'
 	| 'backwardKeyDown'
 	| 'rightKeyDown'
@@ -25,7 +27,9 @@ type GameControlEventName =
 	| 'upKeyDown'
 	| 'downKeyDown'
 	| 'escapeKeyDown'
-	| 'enterKeyDown';
+	| 'enterKeyDown'
+	| 'attackKeyDown'
+	| 'interactKeyDown';
 
 type GameControlsManagerEvents = {
 	[K in GameControlEventName]: { type: K };
@@ -41,6 +45,8 @@ export class GameControlsManager extends THREE.EventDispatcher<GameControlsManag
 	moveRight = false;
 	moveUp = false;
 	moveDown = false;
+	attacking = false;
+	interacting = false;
 
 	// Physics-based movement
 	speed = 5.0; // Walking speed (reduced from 20.0)
@@ -81,9 +87,10 @@ export class GameControlsManager extends THREE.EventDispatcher<GameControlsManag
 	private initListeners() {
 		GameManager.instance.gameCanvas.addEventListener('click', this.enterPointerLock);
 		this.controls.addEventListener('unlock', this._boundOnExitPointerLock);
-
 		window.addEventListener('keydown', this._boundKeyDown);
 		window.addEventListener('keyup', this._boundKeyUp);
+		window.addEventListener('mousedown', (e) => this._boundMouseDown(e));
+		window.addEventListener('mouseup', (e) => this._boundMouseUp(e));
 	}
 
 	dispose() {
@@ -91,6 +98,36 @@ export class GameControlsManager extends THREE.EventDispatcher<GameControlsManag
 		this.controls.removeEventListener('unlock', this._boundOnExitPointerLock);
 		window.removeEventListener('keydown', this._boundKeyDown);
 		window.removeEventListener('keyup', this._boundKeyUp);
+		window.removeEventListener('mousedown', (e) => this._boundMouseDown(e));
+		window.removeEventListener('mouseup', (e) => this._boundMouseUp(e));
+	}
+
+	private _boundMouseDown(e: MouseEvent) {
+		if (e.button === 0) {
+			// Lewy przycisk myszy — np. strzelanie
+			Debug.log(DebugType.CONTROLS, DebugLevel.DEBUG, 'Left mouse button clicked');
+			this.attacking = true;
+			this.dispatchEvent({ type: 'attackKeyDown' });
+		} else if (e.button === 2) {
+			// Prawy przycisk myszy — np. celowanie / blokowanie
+			Debug.log(DebugType.CONTROLS, DebugLevel.DEBUG, 'Right mouse button clicked');
+			this.interacting = true;
+			this.dispatchEvent({ type: 'interactKeyDown' });
+		}
+	}
+
+	private _boundMouseUp(e: MouseEvent) {
+		if (e.button === 0) {
+			// Lewy przycisk myszy — np. strzelanie
+			Debug.log(DebugType.CONTROLS, DebugLevel.DEBUG, 'Left mouse button clicked');
+			this.attacking = false;
+			this.dispatchEvent({ type: 'attackKeyUp' });
+		} else if (e.button === 2) {
+			// Prawy przycisk myszy — np. celowanie / blokowanie
+			Debug.log(DebugType.CONTROLS, DebugLevel.DEBUG, 'Right mouse button clicked');
+			this.interacting = false;
+			this.dispatchEvent({ type: 'interactKeyUp' });
+		}
 	}
 
 	private onKeyDown(e: KeyboardEvent) {

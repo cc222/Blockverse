@@ -6,6 +6,7 @@ export enum DebugType {
 	WORLD = 'world',
 	CONTROLS = 'controls',
 	NETWORK = 'network',
+	PLAYER = 'player',
 	LOCALSTORAGE = 'LocalStorage',
 	OTHER = 'other'
 }

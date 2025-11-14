@@ -66,7 +66,7 @@ export class InterfaceSettingMenu {
 							label: 'Wyjdź',
 							action: () => {
 								this.instance.closeMenu();
-								GameManager.instance.controlsManager.enterPointerLock();
+								GameManager.instance.playerManager.controls.enterPointerLock();
 							}
 						})
 						//{ label: 'Powrót do głownego menu', action: () => InterfaceSetting.instance.closeMenu() },

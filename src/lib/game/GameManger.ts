@@ -1,5 +1,5 @@
 import { MenuManager } from '$lib/components/menus/MenuManager.svelte';
-import { GameControlsManager } from './GameControlsManager';
+import { PlayerManager } from './PlayerManager';
 import { StatsOverlayManager } from './StatsOverlayManager';
 import { createTextureAtlas } from './textures/textureAtlas';
 import { ThreeManager } from './ThreeManager';
@@ -9,12 +9,13 @@ import { WorldManager } from './world/WorldManager';
 export class GameManager {
 	public static instance: GameManager;
 
-	controlsManager!: GameControlsManager;
+	//controlsManager!: GameControlsManager;
 	statsOverlayManager!: StatsOverlayManager;
 	prevFrameTime!: number;
 	gameCanvas!: HTMLCanvasElement;
 	mesherService!: MesherService;
 	menuManager!: MenuManager;
+	playerManager!: PlayerManager;
 	dispose: () => void = () => {};
 
 	private constructor(canvas: HTMLCanvasElement) {
@@ -31,7 +32,7 @@ export class GameManager {
 		this.prevFrameTime = now;
 
 		this.statsOverlayManager.beginStatsFrame();
-		this.controlsManager.update(delta);
+		this.playerManager.update(delta);
 		WorldManager.update();
 		ThreeManager.render();
 		this.statsOverlayManager.endStatsFrame();
@@ -51,7 +52,8 @@ export class GameManager {
 		WorldManager.init();
 
 		this.menuManager = MenuManager.instance;
-		this.controlsManager = new GameControlsManager(ThreeManager.camera);
+		this.playerManager = new PlayerManager();
+		//this.controlsManager = new GameControlsManager(ThreeManager.camera);
 		this.statsOverlayManager = new StatsOverlayManager();
 
 		this.menuManager.initializeAndLoadFromStorageAllMenus();
@@ -61,7 +63,7 @@ export class GameManager {
 
 		return () => {
 			window.removeEventListener('resize', this.onResize);
-			this.controlsManager.dispose();
+			this.playerManager.dispose();
 			ThreeManager.renderer.dispose();
 			WorldManager.chunkManager.disposeAll();
 		};

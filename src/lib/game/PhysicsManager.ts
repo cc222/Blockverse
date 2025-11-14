@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { WorldManager } from './world/WorldManager';
-import { Block } from './world/blocks';
 
 export class PhysicsManager {
 	// Player physics properties

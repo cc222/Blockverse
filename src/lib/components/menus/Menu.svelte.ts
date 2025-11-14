@@ -79,14 +79,14 @@ export class Menu {
 	initListeners() {
 		//make it via document to satisfy pointer lock api
 		document.addEventListener('keyup', this._boundKeyUp);
-		const controls = GameManager.instance.controlsManager;
+		const controls = GameManager.instance.playerManager.controls;
 		controls.addEventListener('enterKeyDown', this._boundEnterKeyDown);
 		controls.addEventListener('upKeyDown', this._bundForwardKeyDown);
 		controls.addEventListener('downKeyDown', this._boundDownKeyDown);
 	}
 	disposeListeners() {
 		document.removeEventListener('keyup', this._boundKeyUp);
-		const controls = GameManager.instance.controlsManager;
+		const controls = GameManager.instance.playerManager.controls;
 		controls.removeEventListener('enterKeyDown', this._boundEnterKeyDown);
 		controls.removeEventListener('upKeyDown', this._bundForwardKeyDown);
 		controls.removeEventListener('downKeyDown', this._boundDownKeyDown);
