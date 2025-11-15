@@ -1,12 +1,11 @@
-import { DebugMenu } from './DebugMenu';
-import { InterfaceSettingMenu } from './InterfaceSettingMenu';
-import { Menu } from './Menu.svelte';
-import { PauseMenu } from './PauseMenu';
-import { SettingsMenu } from './SettingsMenu';
+import { DebugMenu } from '../../components/menus/DebugMenu';
+import { InterfaceSettingMenu } from '../../components/menus/InterfaceSettingMenu';
+import { Menu } from '../../components/menus/Menu.svelte';
+import { PauseMenu } from '../../components/menus/PauseMenu';
+import { SettingsMenu } from '../../components/menus/SettingsMenu';
+import { BaseManager } from './BaseManager';
 
-export class MenuManager {
-	private static _instance?: MenuManager;
-
+export class MenuManager extends BaseManager {
 	private menus = [
 		PauseMenu.instance,
 		SettingsMenu.instance,
@@ -16,14 +15,10 @@ export class MenuManager {
 
 	activeMenu = $state<Menu | null>(null);
 
-	static get instance(): MenuManager {
-		if (!this._instance) {
-			this._instance = new MenuManager();
-		}
-		return this._instance;
+	public constructor() {
+		super();
+		this.initializeAndLoadFromStorageAllMenus();
 	}
-
-	private constructor() {}
 	/**
 	 * Otwórz konkretne menu
 	 */

@@ -17,6 +17,7 @@
 	const focusChat = () => inputRef?.focus();
 	const unfocusChat = () => inputRef?.blur();
 
+	//TODO: make it in controlsManager
 	const handleKeyDown = (event: KeyboardEvent) => {
 		if (event.key === 't' || event.key === '/') {
 			//event.preventDefault();
@@ -24,13 +25,14 @@
 		}
 	};
 
-	GameManager.onInitialize(async () => {
-		chatManager = await ChatManager.getInstance();
-		chatManager.isEnabled = true;
+	ChatManager.afterInitialization((chatManagerInstance) => {
+		chatManager = chatManagerInstance;
+		window.addEventListener('keydown', handleKeyDown);
 	});
 
-	onMount(() => window.addEventListener('keydown', handleKeyDown));
-	onDestroy(() => window.removeEventListener('keydown', handleKeyDown));
+	ChatManager.onDestroy(() => {
+		window.removeEventListener('keydown', handleKeyDown);
+	});
 </script>
 
 {#if chatManager?.isEnabled}

@@ -2,16 +2,19 @@ import { GameManager } from '../GameManger';
 import { createTextureAtlas } from '../textures/textureAtlas';
 //import { createTextureAtlas } from '../textures/textureAtlas';
 import { BaseManager } from './BaseManager';
+import { MenuManager } from './MenuManager.svelte';
 
 export class MainManager extends BaseManager {
 	private gameManagerDispose: (() => void) | null = null;
 	public static instance: MainManager;
+	public menuManager!: MenuManager;
 	//public gameManager!: GameManager;
 	constructor(public gameCanvas: HTMLCanvasElement) {
 		super();
 		MainManager.instance = this;
 		MainManager.afterInitialization(async () => {
 			await createTextureAtlas();
+			this.menuManager = await MenuManager.getInstance();
 			// ważne: await i przechowanie dispose
 			const maybeDispose = await GameManager.initialize(gameCanvas);
 			// jeśli initialize zwraca dispose lub promise<dispose>

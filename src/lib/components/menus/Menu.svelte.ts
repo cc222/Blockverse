@@ -1,13 +1,13 @@
 import { GameManager } from '$lib/game/GameManger';
-import { MenuManager } from './MenuManager.svelte';
-import type { MenuOption } from './MenuOption.svelte';
+import { MainManager } from '$lib/game/Managers/MainManager';
+import type { IMenuOption } from './MenuOption.svelte';
 export class Menu {
 	showMenu = $state(false);
 	selectedOption = $state(0);
 	title = 'Menu Gry';
 	menuHint =
 		'Użyj strzałek ↑↓ lub myszy do nawigacji • Enter lub kliknij aby wybrać • ESC aby wrócić';
-	menuOptions: MenuOption[] = $state([]);
+	menuOptions: IMenuOption[] = $state([]);
 
 	static initializeStorageForMenu(menu: Menu) {
 		menu.menuOptions.forEach((option) => {
@@ -22,7 +22,7 @@ export class Menu {
 		title,
 		menuHint
 	}: {
-		menuOptions: MenuOption[];
+		menuOptions: IMenuOption[];
 		onMenuClose?: () => void;
 		onMenuExit?: () => void;
 		title?: string;
@@ -57,7 +57,7 @@ export class Menu {
 		}
 	};
 	_boundEnterKeyDown = () => {
-		this.menuOptions[this.selectedOption].action();
+		this.menuOptions[this.selectedOption].onClick();
 	};
 	_bundForwardKeyDown = () => {
 		if (!this.menuOptions?.length) return;
@@ -73,7 +73,7 @@ export class Menu {
 	openMenu() {
 		this.showMenu = true;
 		this.initListeners();
-		MenuManager.instance._openMenu(this);
+		MainManager.instance.menuManager._openMenu(this);
 	}
 
 	initListeners() {
@@ -93,7 +93,7 @@ export class Menu {
 	}
 	closeMenu() {
 		if (this.showMenu) {
-			MenuManager.instance._closeActiveMenu();
+			MainManager.instance.menuManager._closeActiveMenu();
 			this.showMenu = false;
 			this.disposeListeners();
 			this.onMenuClose?.();

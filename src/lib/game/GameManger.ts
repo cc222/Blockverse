@@ -1,4 +1,3 @@
-import { MenuManager } from '$lib/components/menus/MenuManager.svelte';
 import { ChatManager } from './Managers/ChatManager.svelte';
 import { StatsOverlayManager } from './Managers/StatsOverlayManager';
 import { ThreeManager } from './Managers/ThreeManager';
@@ -23,7 +22,6 @@ export class GameManager {
 	prevFrameTime!: number;
 	gameCanvas!: HTMLCanvasElement;
 	mesherService!: MesherService;
-	menuManager!: MenuManager;
 	playerManager!: PlayerManager;
 	private static onInitializeCallbacks: (() => void)[] = [];
 	dispose: () => void = () => {};
@@ -42,9 +40,6 @@ export class GameManager {
 
 	private constructor(canvas: HTMLCanvasElement) {
 		this.myPlayerId = 'localPlayer';
-		const transportLayer = new LocalTransport(new GameServer());
-		this.gameServer = Transport.createGameProxy(transportLayer);
-		this.gameServer.addPlayer(this.myPlayerId, transportLayer);
 		this.gameCanvas = canvas;
 		GameManager.instance = this;
 	}
@@ -65,21 +60,20 @@ export class GameManager {
 	};
 
 	public async startGame() {
+		this.mesherService = new MesherService();
+		const transportLayer = new LocalTransport(new GameServer());
+		this.gameServer = Transport.createGameProxy(transportLayer);
+		this.gameServer.addPlayer(this.myPlayerId, transportLayer);
 		this.threeManager = await ThreeManager.getInstance(this.gameCanvas);
 		this.statsOverlayManager = await StatsOverlayManager.getInstance();
-		this.chatManager = new ChatManager();
+		this.chatManager = await ChatManager.getInstance(this.gameServer);
 		this.playerManager = new PlayerManager(this.threeManager);
 		WorldManager.init(this.threeManager);
 	}
 
 	private async initializeAsync(): Promise<() => void> {
 		await this.startGame();
-		this.mesherService = new MesherService();
-
-		this.menuManager = MenuManager.instance;
 		//this.controlsManager = new GameControlsManager(ThreeManager.camera);
-
-		this.menuManager.initializeAndLoadFromStorageAllMenus();
 
 		this.prevFrameTime = performance.now();
 		this.loop();

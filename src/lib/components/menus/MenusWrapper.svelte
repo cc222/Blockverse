@@ -1,11 +1,17 @@
 <script lang="ts">
 	import MenuComponent from './MenuComponent.svelte';
-	import { MenuManager } from './MenuManager.svelte';
+	import { MenuManager } from '../../game/Managers/MenuManager.svelte';
+	import { onMount } from 'svelte';
 
-	const menuManager = MenuManager.instance;
+	let menuManager: MenuManager;
+	onMount(async () => {
+		MenuManager.afterInitialization((instance) => {
+			menuManager = instance;
+		});
+	});
 </script>
 
 <!-- Renderuj tylko aktywne menu -->
-{#if menuManager.activeMenu}
+{#if menuManager && menuManager.activeMenu}
 	<MenuComponent menu={menuManager.activeMenu} />
 {/if}

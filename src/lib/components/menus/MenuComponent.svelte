@@ -18,7 +18,7 @@
 			<h1 class="menu-title">Menu Gry</h1>
 
 			<div class="menu-options">
-				{#each menu.menuOptions as option, index}
+				{#each menu.menuOptions.filter((opt) => opt.isEnabled) as option, index (option)}
 					<button
 						class="menu-button"
 						class:selected={menu.selectedOption === index}

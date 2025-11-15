@@ -1,4 +1,5 @@
-type Callback = () => void | Promise<void>;
+/* eslint-disable @typescript-eslint/no-explicit-any */
+type Callback<T = BaseManager> = (instance: T) => void | Promise<void>;
 
 // Symbol keys for storing per-class data directly on constructor
 const AFTER_INIT_CALLBACKS = Symbol('afterInitCallbacks');
@@ -7,9 +8,9 @@ const IS_INITIALIZED = Symbol('isInitialized');
 const IS_DESTROYED = Symbol('isDestroyed');
 const INSTANCE = Symbol('instance');
 
-interface ManagerConstructor {
-	[AFTER_INIT_CALLBACKS]?: Callback[];
-	[ON_DESTROY_CALLBACKS]?: Callback[];
+export interface ManagerConstructor {
+	[AFTER_INIT_CALLBACKS]?: Callback<any>[];
+	[ON_DESTROY_CALLBACKS]?: Callback<any>[];
 	[IS_INITIALIZED]?: boolean;
 	[IS_DESTROYED]?: boolean;
 	[INSTANCE]?: BaseManager;
@@ -19,7 +20,7 @@ export abstract class BaseManager {
 	protected constructor() {}
 
 	/** Get or initialize afterInit callbacks array for this specific class */
-	private static getAfterInitCallbacks(ctor: ManagerConstructor): Callback[] {
+	private static getAfterInitCallbacks(ctor: ManagerConstructor): Callback<any>[] {
 		if (!ctor[AFTER_INIT_CALLBACKS]) {
 			ctor[AFTER_INIT_CALLBACKS] = [];
 		}
@@ -27,7 +28,7 @@ export abstract class BaseManager {
 	}
 
 	/** Get or initialize onDestroy callbacks array for this specific class */
-	private static getOnDestroyCallbacks(ctor: ManagerConstructor): Callback[] {
+	private static getOnDestroyCallbacks(ctor: ManagerConstructor): Callback<any>[] {
 		if (!ctor[ON_DESTROY_CALLBACKS]) {
 			ctor[ON_DESTROY_CALLBACKS] = [];
 		}
@@ -65,22 +66,34 @@ export abstract class BaseManager {
 	}
 
 	/** Register a callback to run after initialization */
-	public static async afterInitialization(cb: Callback): Promise<void> {
-		const callbacks = this.getAfterInitCallbacks(this as ManagerConstructor);
+	public static async afterInitialization<T extends BaseManager>(
+		this: { new (...args: any[]): T } & ManagerConstructor,
+		cb: Callback<T>
+	): Promise<void> {
+		const callbacks = BaseManager.getAfterInitCallbacks(this);
 		callbacks.push(cb);
 
-		if (this.getIsInitialized(this as ManagerConstructor)) {
-			await cb();
+		if (BaseManager.getIsInitialized(this)) {
+			const instance = BaseManager.getInstance_internal(this) as T;
+			if (instance) {
+				await cb(instance);
+			}
 		}
 	}
 
 	/** Register a callback to run on destroy */
-	public static async onDestroy(cb: Callback): Promise<void> {
-		const callbacks = this.getOnDestroyCallbacks(this as ManagerConstructor);
+	public static async onDestroy<T extends BaseManager>(
+		this: { new (...args: any[]): T } & ManagerConstructor,
+		cb: Callback<T>
+	): Promise<void> {
+		const callbacks = BaseManager.getOnDestroyCallbacks(this);
 		callbacks.push(cb);
 
-		if (this.getIsDestroyed(this as ManagerConstructor)) {
-			await cb();
+		if (BaseManager.getIsDestroyed(this)) {
+			const instance = BaseManager.getInstance_internal(this) as T;
+			if (instance) {
+				await cb(instance);
+			}
 		}
 	}
 
@@ -93,9 +106,13 @@ export abstract class BaseManager {
 		this.setIsInitialized(ctor, true);
 		this.setIsDestroyed(ctor, false);
 
+		const instance = this.getInstance_internal(ctor);
 		const callbacks = this.getAfterInitCallbacks(ctor);
-		for (const cb of callbacks) {
-			await cb();
+
+		if (instance) {
+			for (const cb of callbacks) {
+				await cb(instance);
+			}
 		}
 	}
 
@@ -108,9 +125,13 @@ export abstract class BaseManager {
 		this.setIsDestroyed(ctor, true);
 		this.setIsInitialized(ctor, false);
 
+		const instance = this.getInstance_internal(ctor);
 		const callbacks = this.getOnDestroyCallbacks(ctor);
-		for (const cb of callbacks) {
-			await cb();
+
+		if (instance) {
+			for (const cb of callbacks) {
+				await cb(instance);
+			}
 		}
 
 		this.setInstance(ctor, undefined);
