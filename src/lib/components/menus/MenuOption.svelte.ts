@@ -9,40 +9,54 @@ export class MenuOption {
 	options?: string[];
 	localStorageKey: MenuLocalStorageKeys | undefined;
 	callActionOnLoadFromLocalStorage = true;
+	isEnabled = $state(true);
 	private loadedFromLocalStorage: boolean = false;
 
 	constructor({
 		label,
 		action,
 		options,
-		localStorageKey
+		localStorageKey,
+		isEnabled,
+		onCreate
 	}: {
 		label: string;
 		action: (option?: string) => void;
 		options?: string[];
 		localStorageKey?: MenuLocalStorageKeys;
+		isEnabled?: boolean;
+		onCreate?: (instance: MenuOption) => void;
 	}) {
 		this.label = label;
 		this.action = action;
 		this.options = options;
 		this.localStorageKey = localStorageKey;
+		this.isEnabled = isEnabled ?? true;
 		if (this.options?.length) {
 			this.selectedOptionIndex = 0;
 			this.selectedOption = this.options[this.selectedOptionIndex];
 		}
+		onCreate?.(this);
+	}
+
+	enableAndLoadFromLocalStorage() {
+		this.isEnabled = true;
+		this.loadFromLocalStorage();
 	}
 
 	loadFromLocalStorage() {
-		if (this.options?.length && !this.loadedFromLocalStorage) {
-			this.selectedOption = LocalStorageManager.getFromStorageOrDefault<string>(
-				this.getLocalStorageKey(),
-				this.options[0]
-			);
-			this.selectedOptionIndex = this.options.indexOf(this.selectedOption);
-			if (this.callActionOnLoadFromLocalStorage) {
-				this.action(this.selectedOption);
+		if (this.isEnabled) {
+			if (this.options?.length && !this.loadedFromLocalStorage) {
+				this.selectedOption = LocalStorageManager.getFromStorageOrDefault<string>(
+					this.getLocalStorageKey(),
+					this.options[0]
+				);
+				this.selectedOptionIndex = this.options.indexOf(this.selectedOption);
+				if (this.callActionOnLoadFromLocalStorage) {
+					this.action(this.selectedOption);
+				}
+				this.loadedFromLocalStorage = true;
 			}
-			this.loadedFromLocalStorage = true;
 		}
 	}
 
