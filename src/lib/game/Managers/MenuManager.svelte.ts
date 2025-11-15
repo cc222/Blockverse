@@ -47,7 +47,7 @@ export class MenuManager extends BaseManager {
 
 	initializeAndLoadFromStorageAllMenus() {
 		for (const menu of this.menus) {
-			Menu.initializeStorageForMenu(menu);
+			menu.initializeFromStorage();
 		}
 	}
 }

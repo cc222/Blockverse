@@ -2,6 +2,7 @@ import { GameManager } from '../GameManger';
 import { createTextureAtlas } from '../textures/textureAtlas';
 //import { createTextureAtlas } from '../textures/textureAtlas';
 import { BaseManager } from './BaseManager';
+import { ControlsManager } from './ControlsManager';
 import { MenuManager } from './MenuManager.svelte';
 
 export class MainManager extends BaseManager {
@@ -14,6 +15,7 @@ export class MainManager extends BaseManager {
 		MainManager.instance = this;
 		MainManager.afterInitialization(async () => {
 			await createTextureAtlas();
+			await ControlsManager.getInstance();
 			this.menuManager = await MenuManager.getInstance();
 			// ważne: await i przechowanie dispose
 			const maybeDispose = await GameManager.initialize(gameCanvas);

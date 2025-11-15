@@ -60,7 +60,7 @@
 		position: absolute;
 		bottom: 1rem;
 		left: 1rem;
-		width: 300px;
+		width: 400px;
 		max-height: 400px;
 		background-color: rgba(0, 0, 0, 0.6);
 		color: white;
