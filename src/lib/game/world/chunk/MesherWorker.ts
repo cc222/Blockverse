@@ -1,7 +1,7 @@
 import { expose } from 'threads/worker';
 import { Block, BlockId } from '../blocks';
 import type { MeshBuffers } from './MeshBuffers';
-import { HALO } from '$lib/game/GameConts';
+import { HALO } from '$lib/game/GameConsts';
 
 interface UVRect {
 	x: number;
@@ -83,11 +83,11 @@ expose({
 			normals: number[];
 			uvs: number[];
 			indices: number[];
-			vcount: number;
+			vCount: number;
 		};
 
-		const solid: MeshData = { positions: [], normals: [], uvs: [], indices: [], vcount: 0 };
-		const trans: MeshData = { positions: [], normals: [], uvs: [], indices: [], vcount: 0 };
+		const solid: MeshData = { positions: [], normals: [], uvs: [], indices: [], vCount: 0 };
+		const trans: MeshData = { positions: [], normals: [], uvs: [], indices: [], vCount: 0 };
 
 		for (let x = HALO; x < width - HALO; x++) {
 			for (let y = HALO; y < height - HALO; y++) {
@@ -131,8 +131,8 @@ expose({
 								[u0, v1]
 							];
 
-							const vBase = target.vcount;
-							target.vcount += 4;
+							const vBase = target.vCount;
+							target.vCount += 4;
 
 							for (let vi = 0; vi < 4; vi++) {
 								const [vx, vy, vz] = vtx[vi];

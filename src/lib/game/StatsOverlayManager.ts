@@ -1,11 +1,16 @@
 import Stats from 'stats.js';
 
-type StatsPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+export enum EStatsPosition {
+	TOP_LEFT = 'top-left',
+	TOP_RIGHT = 'top-right',
+	BOTTOM_LEFT = 'bottom-left',
+	BOTTOM_RIGHT = 'bottom-right'
+}
 
 export class StatsOverlayManager {
 	private stats: Stats;
 	isEnabled = false;
-	position: StatsPosition = 'top-left';
+	position: EStatsPosition = EStatsPosition.TOP_LEFT;
 
 	constructor() {
 		this.stats = new Stats();
@@ -25,11 +30,11 @@ export class StatsOverlayManager {
 	updateStyles() {
 		this.stats.dom.style.display = this.isEnabled ? 'block' : 'none';
 
-		const positions: Record<StatsPosition, Partial<CSSStyleDeclaration>> = {
-			'top-left': { top: '0', left: '0', right: '', bottom: '' },
-			'top-right': { top: '0', right: '0', left: '', bottom: '' },
-			'bottom-left': { bottom: '0', left: '0', top: '', right: '' },
-			'bottom-right': { bottom: '0', right: '0', top: '', left: '' }
+		const positions: Record<EStatsPosition, Partial<CSSStyleDeclaration>> = {
+			[EStatsPosition.TOP_LEFT]: { top: '0', left: '0', right: '', bottom: '' },
+			[EStatsPosition.TOP_RIGHT]: { top: '0', right: '0', left: '', bottom: '' },
+			[EStatsPosition.BOTTOM_LEFT]: { bottom: '0', left: '0', top: '', right: '' },
+			[EStatsPosition.BOTTOM_RIGHT]: { bottom: '0', right: '0', top: '', left: '' }
 		};
 
 		Object.assign(this.stats.dom.style, positions[this.position]);

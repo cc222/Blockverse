@@ -1,4 +1,4 @@
-import { ThreeManager } from '../ThreeManager';
+import { ThreeManager } from '../Managers/ThreeManager';
 import { ChunkService } from './chunk/ChunkService';
 import { WorldChunkManager } from './chunk/WorldChunkManager';
 
@@ -8,13 +8,13 @@ export class WorldManager {
 	static chunkService: ChunkService;
 	static chunkManager: WorldChunkManager;
 
-	static init() {
+	static init(threeManager: ThreeManager) {
 		this.seed = Math.random() * 10000;
 		this.chunkService = new ChunkService();
-		this.chunkManager = new WorldChunkManager(ThreeManager.scene, this.seed, this.chunkService);
+		this.chunkManager = new WorldChunkManager(threeManager.scene, this.seed, this.chunkService);
 	}
 
-	static update() {
-		this.chunkManager.update(ThreeManager.camera.position);
+	static update(threeManager: ThreeManager) {
+		this.chunkManager.update(threeManager.camera.position);
 	}
 }

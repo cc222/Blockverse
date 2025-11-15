@@ -1,4 +1,5 @@
 import { GameManager } from '$lib/game/GameManger';
+import { EStatsPosition } from '$lib/game/StatsOverlayManager';
 import { MenuLocalStorageKeys } from '$lib/localStorge/menu/MenuLocalStorageKeys';
 import { Menu } from './Menu.svelte';
 import { MenuOption } from './MenuOption.svelte';
@@ -7,10 +8,10 @@ import { SettingsMenu } from './SettingsMenu';
 export class InterfaceSettingMenu {
 	private static _instance: Menu;
 	private static readonly positionLabels = {
-		'Lewy Górny róg ekranu': 'top-left',
-		'Prawy Górny róg ekranu': 'top-right',
-		'Lewy Dolny róg ekranu': 'bottom-left',
-		'Prawy Dolny róg ekranu': 'bottom-right'
+		'Lewy Górny róg ekranu': EStatsPosition.TOP_LEFT,
+		'Prawy Górny róg ekranu': EStatsPosition.TOP_RIGHT,
+		'Lewy Dolny róg ekranu': EStatsPosition.BOTTOM_LEFT,
+		'Prawy Dolny róg ekranu': EStatsPosition.BOTTOM_RIGHT
 	} as const;
 	static get instance(): Menu {
 		if (!this._instance) {

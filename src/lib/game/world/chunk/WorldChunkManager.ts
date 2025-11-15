@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { ChunkService } from './ChunkService';
 import { Chunk } from './Chunk';
-import { CHUNK_SIZE, HALO } from '$lib/game/GameConts';
+import { CHUNK_SIZE, HALO } from '$lib/game/GameConsts';
 import { textureAtlas } from '$lib/game/textures/textureAtlas';
 import type { MeshData } from './MeshData';
 import { Debug } from '$lib/debug/Debug';
@@ -185,7 +185,7 @@ export class WorldChunkManager {
 				job.priority = this.priorityFor(job.chunk);
 			}
 			if (queueSize > 0) {
-				Debug.log(DebugType.WORLD, DebugLevel.DEBUG, 'Reprioritized queue', {
+				Debug.log(DebugType.WORLD, DebugLevel.DEBUG, 'RePrioritized queue', {
 					queueSize: queueSize
 				});
 			}

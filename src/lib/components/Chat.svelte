@@ -3,46 +3,37 @@
 	import { GameManager } from '$lib/game/GameManger';
 	import { onDestroy, onMount } from 'svelte';
 
-	let chatManager: ChatManager | undefined = $state(undefined);
-	let inputRef: HTMLInputElement | undefined = $state();
-	let input: string = $state('');
+	let chatManager: ChatManager;
+	let inputRef: HTMLInputElement;
+	let input = '';
 
-	function sendMessage() {
-		if (input.trim() === '') return;
-		if (chatManager) {
-			chatManager.sendMessage(input);
-			input = '';
-		}
-	}
+	const sendMessage = () => {
+		if (!input.trim() || !chatManager) return;
+		chatManager.sendMessage(input);
+		input = '';
+		unfocusChat();
+	};
 
-	function focusChat() {
-		if (inputRef) {
-			inputRef.focus();
-		}
-	}
+	const focusChat = () => inputRef?.focus();
+	const unfocusChat = () => inputRef?.blur();
 
-	function handleKeyDown(event: KeyboardEvent) {
+	const handleKeyDown = (event: KeyboardEvent) => {
 		if (event.key === 't' || event.key === '/') {
-			event.preventDefault(); // zapobiega wstawieniu "/" do pola
+			//event.preventDefault();
 			focusChat();
 		}
-	}
+	};
 
 	GameManager.onInitialize(() => {
 		chatManager = GameManager.instance.chatManager;
 		chatManager.isEnabled = true;
 	});
 
-	onMount(() => {
-		window.addEventListener('keydown', handleKeyDown);
-	});
-
-	onDestroy(() => {
-		window.removeEventListener('keydown', handleKeyDown);
-	});
+	onMount(() => window.addEventListener('keydown', handleKeyDown));
+	onDestroy(() => window.removeEventListener('keydown', handleKeyDown));
 </script>
 
-{#if chatManager && chatManager.isEnabled}
+{#if chatManager?.isEnabled}
 	<div class="chat-container">
 		<div class="messages">
 			{#each chatManager.messages as msg}
@@ -55,9 +46,9 @@
 				type="text"
 				bind:value={input}
 				placeholder="Napisz wiadomość..."
-				onkeydown={(e) => e.key === 'Enter' && sendMessage()}
+				on:keydown={(e) => e.key === 'Enter' && sendMessage()}
 			/>
-			<button onclick={sendMessage}>Wyślij</button>
+			<button on:click={sendMessage}>Wyślij</button>
 		</div>
 	</div>
 {/if}

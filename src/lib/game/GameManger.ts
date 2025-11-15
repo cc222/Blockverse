@@ -1,18 +1,20 @@
 import { MenuManager } from '$lib/components/menus/MenuManager.svelte';
 import { ChatManager } from './ChatManager.svelte';
+import { ThreeManager } from './Managers/ThreeManager';
 import { PlayerManager } from './PlayerManager';
 import { GameServer } from './server/GameServer';
 import { LocalTransport } from './server/Transport/LocalTransport';
 import { Transport } from './server/Transport/Transport';
 import { StatsOverlayManager } from './StatsOverlayManager';
 import { createTextureAtlas } from './textures/textureAtlas';
-import { ThreeManager } from './ThreeManager';
 import { MesherService } from './world/chunk/MesherService';
 import { WorldManager } from './world/WorldManager';
 
 export class GameManager {
 	public static instance: GameManager;
 	private static _isInitialized: boolean = false;
+
+	threeManager?: ThreeManager;
 
 	//controlsManager!: GameControlsManager;
 	gameServer!: GameServer;
@@ -47,38 +49,35 @@ export class GameManager {
 		this.gameServer.addPlayer(this.myPlayerId, transportLayer);
 		this.gameCanvas = canvas;
 		GameManager.instance = this;
-
-		window.addEventListener('resize', this.onResize);
 	}
 
 	private loop = () => {
 		requestAnimationFrame(this.loop);
-		const now = performance.now();
-		const delta = (now - this.prevFrameTime) / 1000;
-		this.prevFrameTime = now;
+		if (this.threeManager) {
+			const now = performance.now();
+			const delta = (now - this.prevFrameTime) / 1000;
+			this.prevFrameTime = now;
 
-		this.statsOverlayManager.beginStatsFrame();
-		this.playerManager.update(delta);
-		WorldManager.update();
-		ThreeManager.render();
-		this.statsOverlayManager.endStatsFrame();
+			this.statsOverlayManager.beginStatsFrame();
+			this.playerManager.update(delta);
+			WorldManager.update(this.threeManager);
+			this.threeManager?.render();
+			this.statsOverlayManager.endStatsFrame();
+		}
 	};
 
-	private onResize = () => {
-		const { camera, renderer } = ThreeManager;
-		camera.aspect = window.innerWidth / window.innerHeight;
-		camera.updateProjectionMatrix();
-		renderer.setSize(window.innerWidth, window.innerHeight);
-	};
+	public async startGame() {
+		this.threeManager = await ThreeManager.getInstance(this.gameCanvas);
+		this.playerManager = new PlayerManager(this.threeManager);
+		WorldManager.init(this.threeManager);
+	}
 
 	private async initializeAsync(): Promise<() => void> {
 		await createTextureAtlas();
+		await this.startGame();
 		this.mesherService = new MesherService();
-		ThreeManager.init(this.gameCanvas);
-		WorldManager.init();
 
 		this.menuManager = MenuManager.instance;
-		this.playerManager = new PlayerManager();
 		//this.controlsManager = new GameControlsManager(ThreeManager.camera);
 		this.statsOverlayManager = new StatsOverlayManager();
 
@@ -93,9 +92,8 @@ export class GameManager {
 		GameManager.onInitializeCallbacks = []; // czyszczenie
 
 		return () => {
-			window.removeEventListener('resize', this.onResize);
 			this.playerManager.dispose();
-			ThreeManager.renderer.dispose();
+			ThreeManager.destroy();
 			WorldManager.chunkManager.disposeAll();
 		};
 	}

@@ -1,11 +1,13 @@
 import * as THREE from 'three';
+import { BaseManager } from './BaseManager';
 
-export class ThreeManager {
-	static scene: THREE.Scene;
-	static camera: THREE.PerspectiveCamera;
-	static renderer: THREE.WebGLRenderer;
+export class ThreeManager extends BaseManager {
+	scene: THREE.Scene;
+	camera: THREE.PerspectiveCamera;
+	renderer: THREE.WebGLRenderer;
 
-	static init(canvas: HTMLCanvasElement) {
+	constructor(canvas: HTMLCanvasElement) {
+		super();
 		this.scene = new THREE.Scene();
 		this.scene.background = new THREE.Color(0x87ceeb);
 		this.scene.fog = new THREE.FogExp2(0x202020, 0.02);
@@ -29,9 +31,21 @@ export class ThreeManager {
 		dir.position.set(-20, 40, 20);
 		dir.castShadow = true;
 		this.scene.add(dir);
+
+		window.addEventListener('resize', this.onResize);
+		ThreeManager.onDestroy(() => {
+			this.renderer.dispose();
+			window.removeEventListener('resize', this.onResize);
+		});
 	}
 
-	static render() {
+	render() {
 		this.renderer.render(this.scene, this.camera);
 	}
+
+	private onResize = () => {
+		this.camera.aspect = window.innerWidth / window.innerHeight;
+		this.camera.updateProjectionMatrix();
+		this.renderer.setSize(window.innerWidth, window.innerHeight);
+	};
 }

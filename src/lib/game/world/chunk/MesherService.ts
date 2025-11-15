@@ -4,6 +4,7 @@ import { textureAtlas } from '$lib/game/textures/textureAtlas';
 import { Debug } from '$lib/debug/Debug';
 import { DebugType } from '$lib/debug/DebugType';
 import { DebugLevel } from '$lib/debug/DebugLevel';
+import type { BlockId } from '../blocks';
 
 const POOL_SIZE = 6;
 
@@ -19,8 +20,11 @@ export class MesherService {
 			() => spawn(new Worker(new URL('./MesherWorker.ts', import.meta.url), { type: 'module' })),
 			POOL_SIZE
 		);
-		for (const [blockId, rect] of Object.entries(textureAtlas.uvs)) {
-			this.blockUVs[blockId] = { x: rect.x, y: rect.y, z: rect.z, w: rect.w };
+		for (const [blockIdStr, rect] of Object.entries(textureAtlas.uvs)) {
+			if (rect) {
+				const blockId = Number(blockIdStr) as BlockId; // cast string to numeric enum
+				this.blockUVs[blockId] = { x: rect.x, y: rect.y, z: rect.z, w: rect.w };
+			}
 		}
 		Debug.log(
 			DebugType.MESHER,

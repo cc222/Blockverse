@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { GameControlsManager } from './GameControlsManager';
-import { ThreeManager } from './ThreeManager';
 import { WorldManager } from './world/WorldManager';
+import { ThreeManager } from './Managers/ThreeManager';
 
 export class PlayerManager {
 	controls: GameControlsManager;
@@ -13,9 +13,9 @@ export class PlayerManager {
 	private lastAttackTime = 0;
 	private lastInteractTime = 0;
 
-	constructor() {
-		this.controls = new GameControlsManager(ThreeManager.camera);
-		this.camera = ThreeManager.camera;
+	constructor(threeManager: ThreeManager) {
+		this.controls = new GameControlsManager(threeManager.camera);
+		this.camera = threeManager.camera;
 
 		// Wireframe podświetlenia
 		const geometry = new THREE.BoxGeometry(1, 1, 1);
@@ -27,7 +27,7 @@ export class PlayerManager {
 		});
 		this.highlightMesh = new THREE.Mesh(geometry, material);
 		this.highlightMesh.visible = false;
-		ThreeManager.scene.add(this.highlightMesh);
+		threeManager.scene.add(this.highlightMesh);
 	}
 
 	public update(delta: number) {

@@ -65,10 +65,7 @@ export class MenuOption {
 		const next = ((this.selectedOptionIndex ?? 0) + direction + len) % len;
 		this.selectedOptionIndex = next;
 		this.selectedOption = this.options[next];
-		console.log('settking key ', this.localStorageKey);
-		console.log();
 		if (this.localStorageKey !== undefined) {
-			console.log('a');
 			LocalStorageManager.saveToStorage(this.getLocalStorageKey(), this.selectedOption);
 		}
 		this.action(this.selectedOption);

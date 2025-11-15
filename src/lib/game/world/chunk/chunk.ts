@@ -1,5 +1,5 @@
 // src/game/chunk.ts
-import { CHUNK_SIZE, HALO } from '$lib/game/GameConts';
+import { CHUNK_SIZE, HALO } from '$lib/game/GameConsts';
 import { GameManager } from '$lib/game/GameManger';
 import * as THREE from 'three';
 import { WorldManager } from '../WorldManager';
