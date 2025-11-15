@@ -1,4 +1,5 @@
 import Stats from 'stats.js';
+import { BaseManager } from './BaseManager';
 
 export enum EStatsPosition {
 	TOP_LEFT = 'top-left',
@@ -7,12 +8,13 @@ export enum EStatsPosition {
 	BOTTOM_RIGHT = 'bottom-right'
 }
 
-export class StatsOverlayManager {
+export class StatsOverlayManager extends BaseManager {
 	private stats: Stats;
 	isEnabled = false;
 	position: EStatsPosition = EStatsPosition.TOP_LEFT;
 
 	constructor() {
+		super();
 		this.stats = new Stats();
 		this.stats.showPanel(0);
 		document.body.appendChild(this.stats.dom);

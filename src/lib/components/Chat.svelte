@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ChatManager } from '$lib/game/ChatManager.svelte';
+	import { ChatManager } from '$lib/game/Managers/ChatManager.svelte';
 	import { GameManager } from '$lib/game/GameManger';
 	import { onDestroy, onMount } from 'svelte';
 
@@ -24,8 +24,8 @@
 		}
 	};
 
-	GameManager.onInitialize(() => {
-		chatManager = GameManager.instance.chatManager;
+	GameManager.onInitialize(async () => {
+		chatManager = await ChatManager.getInstance();
 		chatManager.isEnabled = true;
 	});
 

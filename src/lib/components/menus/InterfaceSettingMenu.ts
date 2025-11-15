@@ -1,5 +1,5 @@
 import { GameManager } from '$lib/game/GameManger';
-import { EStatsPosition } from '$lib/game/StatsOverlayManager';
+import { EStatsPosition } from '$lib/game/Managers/StatsOverlayManager';
 import { MenuLocalStorageKeys } from '$lib/localStorge/menu/MenuLocalStorageKeys';
 import { Menu } from './Menu.svelte';
 import { MenuOption } from './MenuOption.svelte';
@@ -21,9 +21,11 @@ export class InterfaceSettingMenu {
 						label: 'Wyswietlaj licznik FPS w',
 						action: (option) => {
 							if (!option) return;
-							GameManager.instance.statsOverlayManager.position =
-								this.positionLabels[option as keyof typeof this.positionLabels];
-							GameManager.instance.statsOverlayManager.updateStyles();
+							if (GameManager.instance.statsOverlayManager) {
+								GameManager.instance.statsOverlayManager.position =
+									this.positionLabels[option as keyof typeof this.positionLabels];
+								GameManager.instance.statsOverlayManager.updateStyles();
+							}
 						},
 						options: [
 							'Lewy Górny róg ekranu',
@@ -46,19 +48,23 @@ export class InterfaceSettingMenu {
 						new MenuOption({
 							label: 'Wyswietlaj licznik FPS',
 							action: (option) => {
-								if (option === 'Włączony') {
-									GameManager.instance.statsOverlayManager.isEnabled = true;
-									this._instance.menuOptions.splice(2, 0, ...fpsStatsOptions);
-									for (const menu of fpsStatsOptions) {
-										menu.loadFromLocalStorage();
+								if (GameManager.instance.statsOverlayManager) {
+									if (option === 'Włączony') {
+										if (GameManager.instance.statsOverlayManager) {
+											GameManager.instance.statsOverlayManager.isEnabled = true;
+											this._instance.menuOptions.splice(2, 0, ...fpsStatsOptions);
+											for (const menu of fpsStatsOptions) {
+												menu.loadFromLocalStorage();
+											}
+										}
+									} else {
+										GameManager.instance.statsOverlayManager.isEnabled = false;
+										this._instance.menuOptions = this._instance.menuOptions.filter(
+											(item) => !fpsStatsOptions.includes(item)
+										);
 									}
-								} else {
-									GameManager.instance.statsOverlayManager.isEnabled = false;
-									this._instance.menuOptions = this._instance.menuOptions.filter(
-										(item) => !fpsStatsOptions.includes(item)
-									);
+									GameManager.instance.statsOverlayManager.updateStyles();
 								}
-								GameManager.instance.statsOverlayManager.updateStyles();
 							},
 							options: ['Wyłączony', 'Włączony'],
 							localStorageKey: MenuLocalStorageKeys.IsShowFPS

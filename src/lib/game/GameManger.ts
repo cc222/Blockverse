@@ -1,12 +1,11 @@
 import { MenuManager } from '$lib/components/menus/MenuManager.svelte';
-import { ChatManager } from './ChatManager.svelte';
+import { ChatManager } from './Managers/ChatManager.svelte';
+import { StatsOverlayManager } from './Managers/StatsOverlayManager';
 import { ThreeManager } from './Managers/ThreeManager';
 import { PlayerManager } from './PlayerManager';
 import { GameServer } from './server/GameServer';
 import { LocalTransport } from './server/Transport/LocalTransport';
 import { Transport } from './server/Transport/Transport';
-import { StatsOverlayManager } from './StatsOverlayManager';
-import { createTextureAtlas } from './textures/textureAtlas';
 import { MesherService } from './world/chunk/MesherService';
 import { WorldManager } from './world/WorldManager';
 
@@ -15,17 +14,17 @@ export class GameManager {
 	private static _isInitialized: boolean = false;
 
 	threeManager?: ThreeManager;
+	statsOverlayManager?: StatsOverlayManager;
+	chatManager?: ChatManager;
 
 	//controlsManager!: GameControlsManager;
 	gameServer!: GameServer;
 	myPlayerId: string;
-	statsOverlayManager!: StatsOverlayManager;
 	prevFrameTime!: number;
 	gameCanvas!: HTMLCanvasElement;
 	mesherService!: MesherService;
 	menuManager!: MenuManager;
 	playerManager!: PlayerManager;
-	chatManager!: ChatManager;
 	private static onInitializeCallbacks: (() => void)[] = [];
 	dispose: () => void = () => {};
 
@@ -43,7 +42,6 @@ export class GameManager {
 
 	private constructor(canvas: HTMLCanvasElement) {
 		this.myPlayerId = 'localPlayer';
-		this.chatManager = new ChatManager();
 		const transportLayer = new LocalTransport(new GameServer());
 		this.gameServer = Transport.createGameProxy(transportLayer);
 		this.gameServer.addPlayer(this.myPlayerId, transportLayer);
@@ -58,28 +56,28 @@ export class GameManager {
 			const delta = (now - this.prevFrameTime) / 1000;
 			this.prevFrameTime = now;
 
-			this.statsOverlayManager.beginStatsFrame();
+			this.statsOverlayManager?.beginStatsFrame();
 			this.playerManager.update(delta);
 			WorldManager.update(this.threeManager);
 			this.threeManager?.render();
-			this.statsOverlayManager.endStatsFrame();
+			this.statsOverlayManager?.endStatsFrame();
 		}
 	};
 
 	public async startGame() {
 		this.threeManager = await ThreeManager.getInstance(this.gameCanvas);
+		this.statsOverlayManager = await StatsOverlayManager.getInstance();
+		this.chatManager = new ChatManager();
 		this.playerManager = new PlayerManager(this.threeManager);
 		WorldManager.init(this.threeManager);
 	}
 
 	private async initializeAsync(): Promise<() => void> {
-		await createTextureAtlas();
 		await this.startGame();
 		this.mesherService = new MesherService();
 
 		this.menuManager = MenuManager.instance;
 		//this.controlsManager = new GameControlsManager(ThreeManager.camera);
-		this.statsOverlayManager = new StatsOverlayManager();
 
 		this.menuManager.initializeAndLoadFromStorageAllMenus();
 

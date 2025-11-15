@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { GameManager } from '$lib/game/GameManger';
+	import { MainManager } from '$lib/game/Managers/MainManager';
 
 	let gameCanvas: HTMLCanvasElement;
 	let dispose: (() => void) | null = null;
@@ -8,15 +9,15 @@
 	onMount(() => {
 		(async () => {
 			console.log('Initializing game...');
-			dispose = await GameManager.initialize(gameCanvas);
+			await MainManager.getInstance(gameCanvas);
 		})();
 		return () => {
-			dispose?.();
+			MainManager.destroy();
 		};
 	});
 
 	onDestroy(() => {
-		dispose?.();
+		MainManager.destroy();
 	});
 </script>
 

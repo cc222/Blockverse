@@ -1,10 +1,13 @@
-import { GameManager } from './GameManger';
+import { GameManager } from '../GameManger';
+import { BaseManager } from './BaseManager';
 
-export class ChatManager {
+export class ChatManager extends BaseManager {
 	messages: string[] = $state([]);
 	isEnabled: boolean = $state(false);
 
-	constructor() {}
+	constructor() {
+		super();
+	}
 
 	addMessage(text: string) {
 		this.messages.push(text);
