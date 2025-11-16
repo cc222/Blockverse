@@ -18,15 +18,17 @@
 			<h1 class="menu-title">Menu Gry</h1>
 
 			<div class="menu-options">
-				{#each menu.menuOptions.filter((opt) => opt.isEnabled) as option, index (option)}
-					<button
-						class="menu-button"
-						class:selected={menu.selectedOption === index}
-						onmouseenter={() => (menu.selectedOption = index)}
-						onclick={() => option.onClick()}
-					>
-						{option.label + (option.selectedOption ? `: ${option.selectedOption}` : '')}
-					</button>
+				{#each menu.menuOptions as option, index}
+					{#if option.isEnabled}
+						<button
+							class="menu-button"
+							class:selected={menu.selectedOption === index}
+							onmouseenter={() => (menu.selectedOption = index)}
+							onclick={() => option.onClick()}
+						>
+							{option.label + (option.selectedOption ? `: ${option.selectedOption}` : '')}
+						</button>
+					{/if}
 				{/each}
 			</div>
 
@@ -173,7 +175,6 @@
 		transition: width 0.4s ease;
 	}
 
-	.menu-button:hover::before,
 	.menu-button.selected::before {
 		width: 100%;
 	}
@@ -198,7 +199,6 @@
 		height: 300px;
 	}
 
-	.menu-button:hover,
 	.menu-button.selected {
 		background: rgba(99, 102, 241, 0.15);
 		border-color: var(--primary);

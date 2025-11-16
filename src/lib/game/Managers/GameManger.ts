@@ -33,21 +33,23 @@ export class GameManager extends BaseManager {
 		const localGame = new GameServer();
 		this.gameServer = Transport.createGameProxy(transportLayer, localGame);
 		this.gameServer.addPlayer.reliable(this.playerId, transportLayer);
-		GameManager.afterInitialization(async () => {
-			this.threeManager = await ThreeManager.getInstance(this.gameCanvas);
-			this.statsOverlayManager = await StatsOverlayManager.getInstance();
-			this.chatManager = await ChatManager.getInstance();
-			this.playerManager = new PlayerManager(this, this.threeManager);
-			WorldManager.init(this.threeManager);
-			this.startLoop();
-		});
-		GameManager.onDestroy(async () => {
-			this.stopLoop();
-			this.playerManager.dispose();
-			ThreeManager.destroy();
-			WorldManager.chunkManager.disposeAll();
-			ChatManager.destroy();
-		});
+	}
+
+	protected async onInitialize(): Promise<void> {
+		this.threeManager = await ThreeManager.getInstance(this.gameCanvas);
+		this.statsOverlayManager = await StatsOverlayManager.getInstance();
+		this.chatManager = await ChatManager.getInstance();
+		this.playerManager = new PlayerManager(this, this.threeManager);
+		WorldManager.init(this.threeManager);
+		this.startLoop();
+	}
+
+	protected async onDestroy(): Promise<void> {
+		this.stopLoop();
+		this.playerManager.dispose();
+		ThreeManager.destroy();
+		WorldManager.chunkManager.disposeAll();
+		ChatManager.destroy();
 	}
 
 	private startLoop(): void {

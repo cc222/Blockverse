@@ -7,6 +7,7 @@ const ON_DESTROY_CALLBACKS = Symbol('onDestroyCallbacks');
 const IS_INITIALIZED = Symbol('isInitialized');
 const IS_DESTROYED = Symbol('isDestroyed');
 const INSTANCE = Symbol('instance');
+const CALLBACKS_REGISTERED = Symbol('callbacksRegistered'); // NOWE!
 
 export interface ManagerConstructor {
 	[AFTER_INIT_CALLBACKS]?: Callback<any>[];
@@ -14,10 +15,42 @@ export interface ManagerConstructor {
 	[IS_INITIALIZED]?: boolean;
 	[IS_DESTROYED]?: boolean;
 	[INSTANCE]?: BaseManager;
+	[CALLBACKS_REGISTERED]?: boolean; // NOWE!
 }
 
 export abstract class BaseManager {
-	protected constructor() {}
+	protected constructor() {
+		// Zarejestruj callbacki tylko RAZ dla tej klasy
+		const ctor = this.constructor as ManagerConstructor;
+		if (!ctor[CALLBACKS_REGISTERED]) {
+			ctor[CALLBACKS_REGISTERED] = true;
+			this.registerCallbacks();
+		}
+	}
+
+	/**
+	 * Override this method to register static callbacks for this class.
+	 * Called only ONCE per class, not per instance.
+	 */
+	protected registerCallbacks(): void {
+		// Domyślnie nic nie robi - nadpisz w podklasach
+	}
+
+	/**
+	 * Override this method for per-instance initialization logic.
+	 * Called every time initialize() is called for an instance.
+	 */
+	protected async onInitialize(): Promise<void> {
+		// Domyślnie nic nie robi
+	}
+
+	/**
+	 * Override this method for per-instance cleanup logic.
+	 * Called every time destroy() is called for an instance.
+	 */
+	protected async onDestroy(): Promise<void> {
+		// Domyślnie nic nie robi
+	}
 
 	/** Get or initialize afterInit callbacks array for this specific class */
 	private static getAfterInitCallbacks(ctor: ManagerConstructor): Callback<any>[] {
@@ -110,6 +143,10 @@ export abstract class BaseManager {
 		const callbacks = this.getAfterInitCallbacks(ctor);
 
 		if (instance) {
+			// 1. Najpierw metoda instancji
+			await instance.onInitialize();
+
+			// 2. Potem callbacki statyczne
 			for (const cb of callbacks) {
 				await cb(instance);
 			}
@@ -129,6 +166,10 @@ export abstract class BaseManager {
 		const callbacks = this.getOnDestroyCallbacks(ctor);
 
 		if (instance) {
+			// 1. Najpierw metoda instancji
+			await instance.onDestroy();
+
+			// 2. Potem callbacki statyczne
 			for (const cb of callbacks) {
 				await cb(instance);
 			}

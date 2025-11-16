@@ -16,9 +16,9 @@ export class MenuManager extends BaseManager {
 
 	activeMenu = $state<Menu | null>(null);
 
-	onEscapeKeyDown = () => {
+	onEscapeKeyUp = () => {
 		if (this.activeMenu) {
-			this._closeActiveMenu();
+			this.activeMenu.exitMenu();
 		} else {
 			PauseMenu.instance.openMenu();
 		}
@@ -27,9 +27,9 @@ export class MenuManager extends BaseManager {
 	public constructor(private controlsManager: ControlsManager) {
 		super();
 		this.initializeAndLoadFromStorageAllMenus();
-		controlsManager.addEventListener('escapeKeyDown', this.onEscapeKeyDown);
+		controlsManager.addEventListener('escapeKeyUp', this.onEscapeKeyUp);
 		MenuManager.onDestroy(() => {
-			controlsManager.removeEventListener('escapeKeyDown', this.onEscapeKeyDown);
+			controlsManager.removeEventListener('escapeKeyUp', this.onEscapeKeyUp);
 		});
 	}
 	/**

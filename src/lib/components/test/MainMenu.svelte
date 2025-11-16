@@ -3,13 +3,21 @@
 	import * as THREE from 'three';
 
 	// Typy
-	type View = 'main' | 'singleplayer' | 'multiplayer' | 'login' | 'register';
+	type View =
+		| 'main'
+		| 'singleplayer'
+		| 'multiplayer'
+		| 'login'
+		| 'register'
+		| 'createWorld'
+		| 'joinFriend';
 
 	interface World {
 		id: number;
 		name: string;
 		lastPlayed: string;
 		seed: string;
+		gamemode: string;
 	}
 
 	interface FavoriteServer {
@@ -27,16 +35,29 @@
 		rotSpeedY: number;
 	}
 
+	interface Friend {
+		id: number;
+		nickname: string;
+		status: 'online' | 'offline';
+		currentWorld?: string;
+	}
+
 	// Stan aplikacji
 	let view = $state<View>('main');
 	let nickname = $state('');
 	let isLoggedIn = $state(false);
 
-	let worlds: World[] = [
-		{ id: 1, name: 'Crystal Caves', lastPlayed: '2 hours ago', seed: 'XK9P' },
-		{ id: 2, name: 'Sky Islands', lastPlayed: '1 day ago', seed: 'ZM4L' },
-		{ id: 3, name: 'Desert Oasis', lastPlayed: '3 days ago', seed: 'PW7N' }
-	];
+	let worlds = $state<World[]>([
+		{ id: 1, name: 'Crystal Caves', lastPlayed: '2 hours ago', seed: 'XK9P', gamemode: 'Survival' },
+		{ id: 2, name: 'Sky Islands', lastPlayed: '1 day ago', seed: 'ZM4L', gamemode: 'Creative' },
+		{ id: 3, name: 'Desert Oasis', lastPlayed: '3 days ago', seed: 'PW7N', gamemode: 'Adventure' }
+	]);
+
+	let friends = $state<Friend[]>([
+		{ id: 1, nickname: 'Steve_PL', status: 'online', currentWorld: 'Crystal Mines' },
+		{ id: 2, nickname: 'Alex_2024', status: 'online', currentWorld: 'Skyblock' },
+		{ id: 3, nickname: 'Notch_Fan', status: 'offline' }
+	]);
 
 	let favoriteServers = $state<FavoriteServer[]>([
 		{ id: 1, name: '🏆 Oficjalny serwer', address: 'official.blockverse.io', players: 142 },
@@ -55,6 +76,11 @@
 	let newServerName = $state('');
 	let newServerAddress = $state('');
 	let showAddServerForm = $state(false);
+
+	// Tworzenie świata
+	let newWorldName = $state('');
+	let newWorldSeed = $state('');
+	let newWorldGamemode = $state<'survival' | 'creative' | 'adventure' | 'hardcore'>('survival');
 
 	// Three.js refs
 	let canvasContainer: HTMLDivElement;
@@ -199,15 +225,23 @@
 
 	// Akcje UI
 	function startSingleplayer(): void {
-		if (nickname || isLoggedIn) {
-			view = 'singleplayer';
-		}
+		view = 'singleplayer';
 	}
 
 	function startMultiplayer(): void {
-		if (nickname || isLoggedIn) {
-			view = 'multiplayer';
+		if (!isLoggedIn) {
+			alert('Musisz być zalogowany, aby grać w trybie wieloosobowym!');
+			return;
 		}
+		view = 'multiplayer';
+	}
+
+	function showJoinFriend(): void {
+		if (!isLoggedIn) {
+			alert('Musisz być zalogowany, aby dołączyć do znajomego!');
+			return;
+		}
+		view = 'joinFriend';
 	}
 
 	function showLogin(): void {
@@ -224,11 +258,35 @@
 	}
 
 	function loadWorld(worldId: number): void {
-		alert(`Ładowanie świata ID: ${worldId}...`);
+		const world = worlds.find((w) => w.id === worldId);
+		alert(`Ładowanie świata: ${world?.name}...\nTryb: ${world?.gamemode}\nSeed: ${world?.seed}`);
 	}
 
-	function createNewWorld(): void {
-		alert('Otwieranie kreatora świata...');
+	function showCreateWorld(): void {
+		view = 'createWorld';
+	}
+
+	function createWorld(): void {
+		if (!newWorldName) {
+			alert('Podaj nazwę świata!');
+			return;
+		}
+
+		const seed = newWorldSeed || Math.random().toString(36).substring(2, 6).toUpperCase();
+		const newWorld: World = {
+			id: Date.now(),
+			name: newWorldName,
+			lastPlayed: 'Teraz',
+			seed: seed,
+			gamemode: newWorldGamemode.charAt(0).toUpperCase() + newWorldGamemode.slice(1)
+		};
+
+		worlds = [newWorld, ...worlds];
+		newWorldName = '';
+		newWorldSeed = '';
+		newWorldGamemode = 'survival';
+		view = 'singleplayer';
+		alert(`Świat "${newWorld.name}" został utworzony!`);
 	}
 
 	function connectToServer(): void {
@@ -241,6 +299,18 @@
 
 	function quickConnect(server: string): void {
 		alert(`Szybkie łączenie z: ${server}...`);
+	}
+
+	function joinFriendWorld(friend: Friend): void {
+		if (friend.status === 'offline') {
+			alert(`${friend.nickname} jest offline!`);
+			return;
+		}
+		if (!friend.currentWorld) {
+			alert(`${friend.nickname} nie gra obecnie w żadnym świecie!`);
+			return;
+		}
+		alert(`Dołączanie do ${friend.nickname} w świecie: ${friend.currentWorld}...`);
 	}
 
 	function performLogin(): void {
@@ -306,11 +376,11 @@
 		favoriteServers = favoriteServers.filter((s) => s.id !== id);
 	}
 
-	function handleNicknameInput(e: Event): void {
-		const target = e.target as HTMLInputElement;
-		nickname = target.value;
+	function generateRandomSeed(): void {
+		newWorldSeed = Math.random().toString(36).substring(2, 10).toUpperCase();
 	}
 
+	// Input handlers
 	function handleServerAddressInput(e: Event): void {
 		const target = e.target as HTMLInputElement;
 		serverAddress = target.value;
@@ -355,6 +425,20 @@
 		const target = e.target as HTMLInputElement;
 		newServerAddress = target.value;
 	}
+
+	function handleNewWorldNameInput(e: Event): void {
+		const target = e.target as HTMLInputElement;
+		newWorldName = target.value;
+	}
+
+	function handleNewWorldSeedInput(e: Event): void {
+		const target = e.target as HTMLInputElement;
+		newWorldSeed = target.value;
+	}
+
+	function getDisplayNickname(): string {
+		return isLoggedIn ? nickname : 'Gracz';
+	}
 </script>
 
 <div id="canvas-container" bind:this={canvasContainer} aria-hidden="true"></div>
@@ -368,40 +452,30 @@
 		<h1 class="logo" role="banner">BLOCKVERSE</h1>
 
 		<div class="card" role="main">
-			{#if !isLoggedIn && !nickname}
-				<div class="input-group">
-					<label for="nickname">Nazwa gracza</label>
-					<input
-						id="nickname"
-						type="text"
-						placeholder="Wpisz swoją nazwę..."
-						value={nickname}
-						oninput={handleNicknameInput}
-						maxlength={16}
-						aria-required="true"
-					/>
-				</div>
-			{:else}
-				<p style="text-align:center;margin-bottom:1.5rem;color:var(--success);font-weight:600;">
-					Witaj, {nickname || 'Graczu'}! 👋
-				</p>
-			{/if}
+			<p style="text-align:center;margin-bottom:1.5rem;color:var(--success);font-weight:600;">
+				Witaj, {getDisplayNickname()}! 👋
+			</p>
 
-			<button
-				class="btn btn-primary"
-				onclick={startSingleplayer}
-				disabled={!nickname && !isLoggedIn}>⚡ Jednoosobowa</button
+			<button class="btn btn-primary" onclick={startSingleplayer}>⚡ Jednoosobowa</button>
+
+			<button class="btn btn-primary" onclick={startMultiplayer} disabled={!isLoggedIn}
+				>🌐 Wieloosobowa {#if !isLoggedIn}<span style="font-size:0.75rem;opacity:0.7;"
+						>(wymagane konto)</span
+					>{/if}</button
 			>
 
-			<button class="btn btn-primary" onclick={startMultiplayer} disabled={!nickname && !isLoggedIn}
-				>🌐 Wieloosobowa</button
+			<button class="btn btn-primary" onclick={showJoinFriend} disabled={!isLoggedIn}
+				>👥 Dołącz do znajomego {#if !isLoggedIn}<span style="font-size:0.75rem;opacity:0.7;"
+						>(wymagane konto)</span
+					>{/if}</button
 			>
 
 			{#if !isLoggedIn}
-				<div class="divider">lub</div>
+				<div class="divider">Zaloguj się, aby odblokować wszystkie funkcje</div>
 				<button class="btn btn-secondary" onclick={showLogin}>🔐 Zaloguj się</button>
 				<button class="btn btn-text" onclick={showRegister}>Nie masz konta? Zarejestruj się</button>
 			{:else}
+				<div class="divider"></div>
 				<button class="btn btn-text" onclick={logout}>Wyloguj ({nickname})</button>
 			{/if}
 		</div>
@@ -422,13 +496,130 @@
 					>
 						<div class="world-info">
 							<h3>{world.name}</h3>
-							<div class="world-meta">{world.lastPlayed}</div>
+							<div class="world-meta">{world.gamemode} • {world.lastPlayed}</div>
 						</div>
 						<div class="world-seed">{world.seed}</div>
 					</div>
 				{/each}
 			</div>
-			<button class="btn btn-primary" onclick={createNewWorld}>✨ Stwórz nowy świat</button>
+			<button class="btn btn-primary" onclick={showCreateWorld}>✨ Stwórz nowy świat</button>
+		</div>
+	{/if}
+
+	{#if view === 'createWorld'}
+		<h1 class="logo">BLOCKVERSE</h1>
+		<div class="card">
+			<h2 style="margin-bottom:1.5rem;font-size:1.5rem;color:var(--text);">
+				Tworzenie nowego świata
+			</h2>
+
+			<div class="input-group">
+				<label for="world-name">Nazwa świata</label>
+				<input
+					id="world-name"
+					type="text"
+					placeholder="Mój niesamowity świat"
+					value={newWorldName}
+					oninput={handleNewWorldNameInput}
+					maxlength={32}
+					aria-required="true"
+				/>
+			</div>
+
+			<div class="input-group">
+				<label for="world-seed">Seed (opcjonalnie)</label>
+				<div style="display: flex; gap: 0.5rem;">
+					<input
+						id="world-seed"
+						type="text"
+						placeholder="Losowy seed"
+						value={newWorldSeed}
+						oninput={handleNewWorldSeedInput}
+						maxlength={16}
+						style="flex: 1;"
+					/>
+					<button
+						class="btn btn-secondary"
+						style="width: auto; padding: 0.875rem 1rem;"
+						onclick={generateRandomSeed}
+					>
+						🎲
+					</button>
+				</div>
+			</div>
+
+			<div class="input-group">
+				<label>Tryb gry</label>
+				<div class="gamemode-grid">
+					<button
+						class="gamemode-btn {newWorldGamemode === 'survival' ? 'active' : ''}"
+						onclick={() => (newWorldGamemode = 'survival')}
+					>
+						<div class="gamemode-icon">⚔️</div>
+						<div class="gamemode-name">Survival</div>
+					</button>
+					<button
+						class="gamemode-btn {newWorldGamemode === 'creative' ? 'active' : ''}"
+						onclick={() => (newWorldGamemode = 'creative')}
+					>
+						<div class="gamemode-icon">🎨</div>
+						<div class="gamemode-name">Creative</div>
+					</button>
+					<button
+						class="gamemode-btn {newWorldGamemode === 'adventure' ? 'active' : ''}"
+						onclick={() => (newWorldGamemode = 'adventure')}
+					>
+						<div class="gamemode-icon">🗺️</div>
+						<div class="gamemode-name">Adventure</div>
+					</button>
+					<button
+						class="gamemode-btn {newWorldGamemode === 'hardcore' ? 'active' : ''}"
+						onclick={() => (newWorldGamemode = 'hardcore')}
+					>
+						<div class="gamemode-icon">💀</div>
+						<div class="gamemode-name">Hardcore</div>
+					</button>
+				</div>
+			</div>
+
+			<button class="btn btn-primary" onclick={createWorld}>🌍 Stwórz świat</button>
+		</div>
+	{/if}
+
+	{#if view === 'joinFriend'}
+		<h1 class="logo">BLOCKVERSE</h1>
+		<div class="card">
+			<h2 style="margin-bottom:1.5rem;font-size:1.5rem;color:var(--text);">Dołącz do znajomego</h2>
+			<div class="world-list">
+				{#each friends as friend}
+					<div
+						class="world-item {friend.status === 'offline' ? 'offline' : ''}"
+						role="button"
+						tabindex="0"
+						onclick={() => joinFriendWorld(friend)}
+						onkeypress={(e) => e.key === 'Enter' && joinFriendWorld(friend)}
+					>
+						<div class="world-info">
+							<h3>
+								<span class="status-dot {friend.status}"></span>
+								{friend.nickname}
+							</h3>
+							<div class="world-meta">
+								{#if friend.status === 'online' && friend.currentWorld}
+									Gra w: {friend.currentWorld}
+								{:else if friend.status === 'online'}
+									Online (w menu)
+								{:else}
+									Offline
+								{/if}
+							</div>
+						</div>
+						{#if friend.status === 'online' && friend.currentWorld}
+							<div class="join-indicator">→</div>
+						{/if}
+					</div>
+				{/each}
+			</div>
 		</div>
 	{/if}
 
@@ -657,7 +848,7 @@
 		background: var(--bg-dark);
 		color: var(--text);
 		overflow: hidden;
-		height: 100vh;
+		min-height: 100vh;
 	}
 
 	#canvas-container {
@@ -666,61 +857,62 @@
 		left: 0;
 		width: 100%;
 		height: 100%;
-		z-index: 1;
+		z-index: 0;
 	}
 
 	#app {
 		position: relative;
-		z-index: 2;
-		height: 100vh;
+		z-index: 1;
+		min-height: 100vh;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		padding: 20px;
+		padding: 2rem;
 	}
 
 	.logo {
-		font-size: 4rem;
+		font-size: 3.5rem;
 		font-weight: 900;
 		background: linear-gradient(135deg, var(--primary), var(--secondary), var(--accent));
 		-webkit-background-clip: text;
-		-webkit-text-fill-color: transparent;
 		background-clip: text;
+		-webkit-text-fill-color: transparent;
+		text-align: center;
 		margin-bottom: 2rem;
-		text-shadow: 0 0 60px rgba(99, 102, 241, 0.5);
-		animation: glow 3s ease-in-out infinite;
-		letter-spacing: -0.05em;
+		letter-spacing: 0.1em;
+		text-shadow: 0 0 30px rgba(99, 102, 241, 0.5);
+		animation: pulse 3s ease-in-out infinite;
 	}
 
-	@keyframes glow {
+	@keyframes pulse {
 		0%,
 		100% {
-			filter: brightness(1);
+			transform: scale(1);
 		}
 		50% {
-			filter: brightness(1.3);
+			transform: scale(1.02);
 		}
 	}
 
 	.card {
 		background: var(--bg-card);
 		backdrop-filter: blur(20px);
-		border: 1px solid var(--border);
-		border-radius: 24px;
+		border: 2px solid var(--border);
+		border-radius: 1.5rem;
 		padding: 2.5rem;
 		width: 100%;
 		max-width: 500px;
-		max-height: 85vh;
-		overflow-y: auto;
-		box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-		animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+		box-shadow:
+			0 20px 60px rgba(0, 0, 0, 0.5),
+			0 0 40px rgba(99, 102, 241, 0.2);
+		animation: slideIn 0.4s ease-out;
 	}
 
-	@keyframes slideUp {
+	@keyframes slideIn {
 		from {
 			opacity: 0;
-			transform: translateY(30px);
+			transform: translateY(20px);
 		}
 		to {
 			opacity: 1;
@@ -728,183 +920,105 @@
 		}
 	}
 
-	.input-group {
-		margin-bottom: 1.5rem;
-	}
-	label {
-		display: block;
-		margin-bottom: 0.5rem;
-		font-size: 0.875rem;
-		font-weight: 600;
-		color: var(--text-dim);
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-	}
-	input {
-		width: 100%;
-		padding: 0.875rem 1rem;
-		background: rgba(15, 15, 35, 0.6);
-		border: 2px solid var(--border);
-		border-radius: 12px;
-		color: var(--text);
-		font-size: 1rem;
-		transition: all 0.3s ease;
-		outline: none;
-	}
-	input:focus {
-		border-color: var(--primary);
-		box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
-	}
-	input::placeholder {
-		color: var(--text-dim);
-		opacity: 0.6;
-	}
-
 	.btn {
 		width: 100%;
 		padding: 1rem 1.5rem;
 		border: none;
-		border-radius: 12px;
+		border-radius: 0.75rem;
 		font-size: 1rem;
-		font-weight: 700;
+		font-weight: 600;
 		cursor: pointer;
 		transition: all 0.3s ease;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		position: relative;
-		overflow: hidden;
-		outline: none;
-	}
-	.btn::before {
-		content: '';
-		position: absolute;
-		top: 50%;
-		left: 50%;
-		width: 0;
-		height: 0;
-		border-radius: 50%;
-		background: rgba(255, 255, 255, 0.1);
-		transform: translate(-50%, -50%);
-		transition:
-			width 0.6s,
-			height 0.6s;
-	}
-	.btn:active::before {
-		width: 300px;
-		height: 300px;
+		margin-bottom: 0.75rem;
+		font-family: inherit;
 	}
 
 	.btn-primary {
 		background: linear-gradient(135deg, var(--primary), var(--secondary));
 		color: white;
-		margin-bottom: 0.75rem;
+		box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
 	}
+
 	.btn-primary:hover:not(:disabled) {
-		transform: translateY(-2px);
-		box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4);
+		/* transform: translateY(-2px); */
+		box-shadow: 0 6px 25px rgba(99, 102, 241, 0.6);
 	}
+
+	.btn-primary:active:not(:disabled) {
+		transform: translateY(0);
+	}
+
 	.btn-primary:disabled {
 		opacity: 0.5;
 		cursor: not-allowed;
 	}
+
 	.btn-secondary {
-		background: rgba(99, 102, 241, 0.1);
-		color: var(--primary);
-		border: 2px solid var(--primary);
-		margin-bottom: 0.75rem;
+		background: rgba(139, 92, 246, 0.2);
+		color: var(--secondary);
+		border: 2px solid var(--secondary);
 	}
+
 	.btn-secondary:hover {
-		background: rgba(99, 102, 241, 0.2);
-		transform: translateY(-2px);
+		background: rgba(139, 92, 246, 0.3);
+		/* transform: translateY(-2px); */
 	}
+
 	.btn-text {
 		background: transparent;
 		color: var(--text-dim);
 		padding: 0.5rem;
 		font-size: 0.875rem;
-		text-transform: none;
 	}
+
 	.btn-text:hover {
 		color: var(--text);
-	}
-
-	.world-list {
-		max-height: 300px;
-		overflow-y: auto;
-		margin-bottom: 1.5rem;
-	}
-	.world-item {
-		background: rgba(15, 15, 35, 0.6);
-		border: 2px solid var(--border);
-		border-radius: 12px;
-		padding: 1rem;
-		margin-bottom: 0.75rem;
-		transition: all 0.3s ease;
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		gap: 1rem;
-	}
-	.world-item:hover {
-		border-color: var(--primary);
 		background: rgba(99, 102, 241, 0.1);
 	}
-	.world-info {
-		flex: 1;
+
+	.input-group {
+		margin-bottom: 1.5rem;
 	}
-	.world-info h3 {
-		font-size: 1.125rem;
-		margin-bottom: 0.25rem;
+
+	.input-group label {
+		display: block;
+		margin-bottom: 0.5rem;
 		color: var(--text);
-	}
-	.world-meta {
-		font-size: 0.75rem;
-		color: var(--text-dim);
-	}
-	.world-seed {
-		font-family: 'Courier New', monospace;
-		background: rgba(99, 102, 241, 0.2);
-		padding: 0.25rem 0.5rem;
-		border-radius: 6px;
+		font-weight: 600;
 		font-size: 0.875rem;
-		color: var(--accent);
 	}
 
-	.remove-btn {
-		background: rgba(239, 68, 68, 0.1);
-		border: 2px solid var(--danger);
-		color: var(--danger);
-		width: 32px;
-		height: 32px;
-		border-radius: 8px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		cursor: pointer;
-		transition: all 0.3s ease;
-		font-size: 1.25rem;
-		flex-shrink: 0;
-	}
-	.remove-btn:hover {
-		background: rgba(239, 68, 68, 0.2);
-		transform: scale(1.1);
-	}
-
-	.add-server-form {
-		background: rgba(15, 15, 35, 0.4);
+	.input-group input {
+		width: 100%;
+		padding: 0.875rem 1rem;
+		background: rgba(15, 15, 35, 0.6);
 		border: 2px solid var(--border);
-		border-radius: 12px;
-		padding: 1rem;
-		margin-bottom: 1rem;
+		border-radius: 0.75rem;
+		color: var(--text);
+		font-size: 1rem;
+		font-family: inherit;
+		transition: all 0.3s ease;
+	}
+
+	.input-group input:focus {
+		outline: none;
+		border-color: var(--primary);
+		box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
+	}
+
+	.input-group input::placeholder {
+		color: var(--text-dim);
+		opacity: 0.6;
 	}
 
 	.divider {
-		text-align: center;
 		margin: 1.5rem 0;
-		position: relative;
+		text-align: center;
 		color: var(--text-dim);
 		font-size: 0.875rem;
+		position: relative;
 	}
+
 	.divider::before,
 	.divider::after {
 		content: '';
@@ -914,69 +1028,230 @@
 		height: 1px;
 		background: var(--border);
 	}
+
 	.divider::before {
 		left: 0;
 	}
+
 	.divider::after {
 		right: 0;
 	}
 
+	.world-list {
+		margin-bottom: 1.5rem;
+		max-height: 400px;
+		overflow-y: auto;
+	}
+
+	.world-list::-webkit-scrollbar {
+		width: 8px;
+	}
+
+	.world-list::-webkit-scrollbar-track {
+		background: rgba(15, 15, 35, 0.4);
+		border-radius: 4px;
+	}
+
+	.world-list::-webkit-scrollbar-thumb {
+		background: var(--primary);
+		border-radius: 4px;
+	}
+
+	.world-item {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 1rem 1.25rem;
+		background: rgba(15, 15, 35, 0.6);
+		border: 2px solid var(--border);
+		border-radius: 0.75rem;
+		margin-bottom: 0.75rem;
+		cursor: pointer;
+		transition: all 0.3s ease;
+	}
+
+	.world-item:hover {
+		border-color: var(--primary);
+		transform: translateX(4px);
+		box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+	}
+
+	.world-item.offline {
+		opacity: 0.6;
+		cursor: default;
+	}
+
+	.world-item.offline:hover {
+		transform: none;
+		border-color: var(--border);
+		box-shadow: none;
+	}
+
+	.world-info {
+		flex: 1;
+	}
+
+	.world-info h3 {
+		color: var(--text);
+		font-size: 1.125rem;
+		margin-bottom: 0.25rem;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.world-meta {
+		color: var(--text-dim);
+		font-size: 0.875rem;
+	}
+
+	.world-seed {
+		background: rgba(99, 102, 241, 0.2);
+		color: var(--primary);
+		padding: 0.375rem 0.75rem;
+		border-radius: 0.5rem;
+		font-weight: 700;
+		font-family: 'Courier New', monospace;
+		font-size: 0.875rem;
+	}
+
+	.status-dot {
+		display: inline-block;
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		margin-right: 0.25rem;
+	}
+
+	.status-dot.online {
+		background: var(--success);
+		box-shadow: 0 0 8px var(--success);
+	}
+
+	.status-dot.offline {
+		background: var(--text-dim);
+	}
+
+	.join-indicator {
+		color: var(--primary);
+		font-size: 1.5rem;
+		font-weight: bold;
+	}
+
 	.back-btn {
-		position: absolute;
+		position: fixed;
 		top: 2rem;
 		left: 2rem;
-		background: rgba(99, 102, 241, 0.1);
-		border: 2px solid var(--primary);
-		color: var(--primary);
-		width: 48px;
-		height: 48px;
+		width: 50px;
+		height: 50px;
+		background: var(--bg-card);
+		backdrop-filter: blur(20px);
+		border: 2px solid var(--border);
 		border-radius: 50%;
+		color: var(--text);
+		font-size: 1.5rem;
+		cursor: pointer;
+		transition: all 0.3s ease;
+		z-index: 10;
 		display: flex;
 		align-items: center;
 		justify-content: center;
+	}
+
+	.back-btn:hover {
+		transform: translateX(-4px);
+		border-color: var(--primary);
+		box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+	}
+
+	.gamemode-grid {
+		display: grid;
+		grid-template-columns: repeat(2, 1fr);
+		gap: 0.75rem;
+	}
+
+	.gamemode-btn {
+		background: rgba(15, 15, 35, 0.6);
+		border: 2px solid var(--border);
+		border-radius: 0.75rem;
+		padding: 1rem;
 		cursor: pointer;
 		transition: all 0.3s ease;
-		font-size: 1.5rem;
-		z-index: 10;
+		text-align: center;
 	}
-	.back-btn:hover {
+
+	.gamemode-btn:hover {
+		border-color: var(--primary);
+		transform: translateY(-2px);
+	}
+
+	.gamemode-btn.active {
+		border-color: var(--primary);
 		background: rgba(99, 102, 241, 0.2);
+		box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+	}
+
+	.gamemode-icon {
+		font-size: 2rem;
+		margin-bottom: 0.5rem;
+	}
+
+	.gamemode-name {
+		color: var(--text);
+		font-weight: 600;
+		font-size: 0.875rem;
+	}
+
+	.add-server-form {
+		background: rgba(15, 15, 35, 0.4);
+		padding: 1.25rem;
+		border-radius: 0.75rem;
+		margin-bottom: 1rem;
+		border: 1px solid var(--border);
+	}
+
+	.remove-btn {
+		background: rgba(239, 68, 68, 0.2);
+		border: 2px solid var(--danger);
+		color: var(--danger);
+		width: 36px;
+		height: 36px;
+		border-radius: 0.5rem;
+		cursor: pointer;
+		transition: all 0.3s ease;
+		font-size: 1.25rem;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+	}
+
+	.remove-btn:hover {
+		background: rgba(239, 68, 68, 0.4);
 		transform: scale(1.1);
 	}
 
-	@media (max-width: 768px) {
+	@media (max-width: 640px) {
 		.logo {
 			font-size: 2.5rem;
-			margin-bottom: 1.5rem;
 		}
+
 		.card {
 			padding: 1.5rem;
-			max-width: 100%;
-			border-radius: 16px;
+			margin: 1rem;
 		}
+
+		#app {
+			padding: 1rem;
+		}
+
 		.back-btn {
 			top: 1rem;
 			left: 1rem;
-			width: 40px;
-			height: 40px;
 		}
-		.btn {
-			padding: 0.875rem 1.25rem;
-		}
-	}
 
-	@media (max-width: 480px) {
-		.logo {
-			font-size: 2rem;
+		.gamemode-grid {
+			grid-template-columns: 1fr;
 		}
-		.card {
-			padding: 1.25rem;
-		}
-	}
-
-	:global(.btn:focus-visible),
-	:global(input:focus-visible) {
-		outline: 3px solid var(--primary);
-		outline-offset: 2px;
 	}
 </style>

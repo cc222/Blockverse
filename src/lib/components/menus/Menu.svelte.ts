@@ -62,20 +62,37 @@ export class Menu {
 	_boundEnterKeyDown = () => {
 		this.menuOptions[this.selectedOption].onClick();
 	};
-	_bundForwardKeyDown = () => {
+
+	_moveSelection = (direction: 1 | -1) => {
 		if (!this.menuOptions?.length) return;
 		const len = this.menuOptions.length;
-		this.selectedOption = (this.selectedOption - 1 + len) % len;
+		if (len === 0) return;
+
+		let currentIndex = this.selectedOption;
+		for (let i = 0; i < len; i++) {
+			currentIndex = (((currentIndex + direction) % len) + len) % len;
+
+			const option = this.menuOptions[currentIndex];
+			if (option && option.isEnabled) {
+				this.selectedOption = currentIndex;
+				return;
+			}
+		}
+	};
+
+	_bundForwardKeyDown = () => {
+		this._moveSelection(-1);
 	};
 	_boundDownKeyDown = () => {
-		if (!this.menuOptions?.length) return;
-		const len = this.menuOptions.length;
-		this.selectedOption = (this.selectedOption + 1) % len;
+		this._moveSelection(1);
 	};
 
 	openMenu() {
 		this.showMenu = true;
 		this.initListeners();
+		//temp xd
+		this._moveSelection(-1);
+		this._moveSelection(1);
 		MainManager.instance.menuManager._openMenu(this);
 	}
 
