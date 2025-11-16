@@ -39,232 +39,294 @@
 
 <style>
 	:root {
-		--bg-overlay: rgba(5, 8, 20, 0.75);
-		--panel-bg: linear-gradient(180deg, rgba(18, 22, 40, 0.95), rgba(14, 17, 30, 0.95));
-		--panel-border: rgba(99, 102, 241, 0.12);
-		--accent: linear-gradient(90deg, #6366f1, #8b5cf6 50%, #3bd1b3 100%);
-		--accent-solid: #6366f1;
-		--muted: #9aa0c4;
-		--text: #e6e9ff;
-		--success: #10b981;
-		--glass: rgba(255, 255, 255, 0.03);
-		--radius: 16px;
-		--shadow-lg: 0 18px 40px rgba(2, 6, 23, 0.7);
+		--primary: #6366f1;
+		--primary-dark: #4f46e5;
+		--secondary: #8b5cf6;
+		--bg-dark: #0f0f23;
+		--bg-card: rgba(30, 30, 60, 0.95);
+		--text: #e0e0ff;
+		--text-dim: #a0a0c0;
+		--accent: #f59e0b;
+		--border: rgba(99, 102, 241, 0.3);
 	}
 
-	/* Overlay */
 	.pause-overlay {
 		position: fixed;
-		inset: 0;
-		background: var(--bg-overlay);
-		backdrop-filter: blur(6px) saturate(1.05);
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background: rgba(15, 15, 35, 0.85);
+		backdrop-filter: blur(20px);
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		z-index: 1000;
-		padding: 24px;
-		animation: fadeIn 180ms ease-out;
+		animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 	}
 
 	@keyframes fadeIn {
 		from {
 			opacity: 0;
-			transform: scale(0.995);
+			backdrop-filter: blur(0px);
 		}
 		to {
 			opacity: 1;
-			transform: scale(1);
+			backdrop-filter: blur(20px);
 		}
 	}
 
-	/* Card */
 	.pause-menu {
-		width: min(720px, 96%);
-		max-width: 720px;
-		background: var(--panel-bg);
-		border: 1px solid var(--panel-border);
-		border-radius: var(--radius);
-		padding: 28px;
-		box-shadow: var(--shadow-lg);
-		position: relative;
-		overflow: hidden;
-		display: flex;
-		flex-direction: column;
-		align-items: stretch;
-		gap: 18px;
+		background: var(--bg-card);
+		backdrop-filter: blur(40px);
+		border: 2px solid var(--border);
+		border-radius: 24px;
+		box-shadow:
+			0 0 0 1px rgba(99, 102, 241, 0.1),
+			0 20px 60px rgba(0, 0, 0, 0.6),
+			inset 0 1px 0 rgba(255, 255, 255, 0.05);
+		padding: 3rem 2.5rem;
+		min-width: 450px;
+		max-width: 90vw;
+		animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 	}
 
-	/* Title */
+	@keyframes slideIn {
+		from {
+			transform: translateY(-30px) scale(0.95);
+			opacity: 0;
+		}
+		to {
+			transform: translateY(0) scale(1);
+			opacity: 1;
+		}
+	}
+
 	.menu-title {
-		margin: 0;
 		font-family:
 			'Inter',
-			system-ui,
 			-apple-system,
+			BlinkMacSystemFont,
 			'Segoe UI',
-			Roboto,
-			'Helvetica Neue',
-			Arial;
-		font-weight: 800;
-		letter-spacing: -0.02em;
-		font-size: 1.75rem;
-		color: var(--text);
-		text-align: center;
-		background: var(--accent);
+			sans-serif;
+		font-size: 2.5rem;
+		font-weight: 900;
+		background: linear-gradient(135deg, var(--primary), var(--secondary), var(--accent));
 		-webkit-background-clip: text;
 		-webkit-text-fill-color: transparent;
 		background-clip: text;
-		text-shadow: 0 6px 28px rgba(59, 209, 179, 0.04);
+		text-align: center;
+		margin: 0 0 2rem 0;
+		letter-spacing: -0.05em;
+		filter: drop-shadow(0 0 30px rgba(99, 102, 241, 0.4));
+		animation: glow 3s ease-in-out infinite;
 	}
 
-	/* Options list */
+	@keyframes glow {
+		0%,
+		100% {
+			filter: drop-shadow(0 0 20px rgba(99, 102, 241, 0.3)) brightness(1);
+		}
+		50% {
+			filter: drop-shadow(0 0 40px rgba(99, 102, 241, 0.6)) brightness(1.2);
+		}
+	}
+
 	.menu-options {
-		display: grid;
-		grid-template-columns: 1fr;
-		gap: 12px;
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		margin-bottom: 2rem;
+	}
+
+	.menu-button {
+		font-family:
+			'Inter',
+			-apple-system,
+			BlinkMacSystemFont,
+			'Segoe UI',
+			sans-serif;
+		font-size: 1rem;
+		font-weight: 600;
+		padding: 1rem 1.5rem;
+		background: rgba(15, 15, 35, 0.6);
+		border: 2px solid var(--border);
+		border-radius: 12px;
+		color: var(--text);
+		cursor: pointer;
+		text-align: left;
+		transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+		position: relative;
+		overflow: hidden;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+
+	.menu-button::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 0%;
+		height: 100%;
+		background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.1), transparent);
+		transition: width 0.4s ease;
+	}
+
+	.menu-button:hover::before,
+	.menu-button.selected::before {
 		width: 100%;
 	}
 
-	/* Button base */
-	.menu-button {
-		appearance: none;
-		-webkit-appearance: none;
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		gap: 12px;
-		padding: 12px 18px;
-		background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01));
-		border: 1px solid rgba(255, 255, 255, 0.03);
-		border-radius: 12px;
-		color: var(--text);
-		font-family:
-			'Inter',
-			system-ui,
-			-apple-system,
-			'Segoe UI',
-			Roboto,
-			'Helvetica Neue',
-			Arial;
-		font-weight: 600;
-		font-size: 1rem;
-		cursor: pointer;
-		transition:
-			transform 160ms cubic-bezier(0.2, 0.9, 0.3, 1),
-			box-shadow 160ms,
-			border-color 160ms,
-			background 160ms;
-		box-shadow: 0 6px 18px rgba(2, 6, 23, 0.45);
-		text-align: left;
-		outline: none;
-	}
-
-	.menu-button .label {
-		display: inline-block;
-		flex: 1 1 auto;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		color: var(--text);
-	}
-
-	.menu-button .opt-value {
-		flex: 0 0 auto;
-		font-family:
-			ui-monospace, SFMono-Regular, Menlo, Monaco, 'Roboto Mono', 'Courier New', monospace;
-		background: var(--glass);
-		padding: 6px 10px;
-		border-radius: 8px;
-		font-size: 0.9rem;
-		color: var(--muted);
-		border: 1px solid rgba(255, 255, 255, 0.03);
-	}
-
-	/* Hover / selected */
-	.menu-button:hover {
-		transform: translateY(-3px);
-		border-color: rgba(99, 102, 241, 0.22);
-		box-shadow: 0 20px 36px rgba(2, 6, 23, 0.65);
-		background: linear-gradient(180deg, rgba(99, 102, 241, 0.04), rgba(59, 209, 179, 0.02));
-	}
-
-	.menu-button.selected,
-	.menu-button[selected] {
-		/* subtle accent background + left accent bar */
-		background: linear-gradient(90deg, rgba(99, 102, 241, 0.06), rgba(59, 209, 179, 0.02));
-		border-color: rgba(99, 102, 241, 0.28);
-		position: relative;
-		box-shadow: 0 24px 48px rgba(2, 6, 23, 0.72);
-	}
-
-	.menu-button.selected::before {
+	.menu-button::after {
 		content: '';
 		position: absolute;
-		left: 0;
-		top: 0;
-		bottom: 0;
-		width: 6px;
-		background: linear-gradient(180deg, #6366f1, #3bd1b3);
-		border-top-left-radius: 12px;
-		border-bottom-left-radius: 12px;
+		top: 50%;
+		left: 50%;
+		width: 0;
+		height: 0;
+		border-radius: 50%;
+		background: rgba(99, 102, 241, 0.2);
+		transform: translate(-50%, -50%);
+		transition:
+			width 0.6s,
+			height 0.6s;
 	}
 
-	/* Focus visible for keyboard users */
-	.menu-button:focus-visible {
-		outline: 3px solid rgba(99, 102, 241, 0.18);
-		outline-offset: 4px;
+	.menu-button:active::after {
+		width: 300px;
+		height: 300px;
 	}
 
-	/* Active press feedback */
+	.menu-button:hover,
+	.menu-button.selected {
+		background: rgba(99, 102, 241, 0.15);
+		border-color: var(--primary);
+		color: #fff;
+		transform: translateX(8px);
+		box-shadow:
+			0 0 0 1px var(--primary),
+			0 8px 24px rgba(99, 102, 241, 0.2),
+			inset 0 1px 0 rgba(255, 255, 255, 0.1);
+	}
+
 	.menu-button:active {
-		transform: translateY(0);
-		box-shadow: 0 8px 14px rgba(2, 6, 23, 0.6);
+		transform: translateX(6px) scale(0.98);
+		box-shadow:
+			0 0 0 1px var(--primary-dark),
+			0 4px 12px rgba(99, 102, 241, 0.3);
 	}
 
-	/* Hint text */
+	.menu-button:focus-visible {
+		outline: 3px solid var(--primary);
+		outline-offset: 3px;
+	}
+
 	.menu-hint {
 		font-family:
 			'Inter',
-			system-ui,
-			-apple-system;
-		font-size: 0.85rem;
-		color: var(--muted);
+			-apple-system,
+			BlinkMacSystemFont,
+			'Segoe UI',
+			sans-serif;
+		font-size: 0.75rem;
+		color: var(--text-dim);
 		text-align: center;
-		margin-top: 6px;
-		opacity: 0.95;
+		margin-top: 1.5rem;
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+		opacity: 0.8;
 	}
 
 	/* Responsywność */
-	@media (max-width: 720px) {
+	@media (max-width: 768px) {
 		.pause-menu {
-			width: 100%;
-			padding: 18px;
-			border-radius: 12px;
+			padding: 2rem 1.5rem;
+			min-width: auto;
+			width: calc(100% - 2rem);
+			border-radius: 16px;
 		}
 
 		.menu-title {
-			font-size: 1.35rem;
+			font-size: 2rem;
+			margin-bottom: 1.5rem;
 		}
 
 		.menu-button {
-			padding: 10px 14px;
-			font-size: 0.96rem;
-			border-radius: 10px;
+			padding: 0.875rem 1.25rem;
+			font-size: 0.9375rem;
 		}
 
-		.menu-button .opt-value {
-			padding: 4px 8px;
-			font-size: 0.82rem;
+		.menu-hint {
+			font-size: 0.6875rem;
 		}
 	}
 
-	/* Reduced motion support */
-	@media (prefers-reduced-motion: reduce) {
-		.pause-overlay,
-		.pause-menu,
+	@media (max-width: 480px) {
+		.pause-menu {
+			padding: 1.5rem 1rem;
+		}
+
+		.menu-title {
+			font-size: 1.75rem;
+		}
+
 		.menu-button {
-			animation: none;
-			transition: none;
+			padding: 0.75rem 1rem;
+			font-size: 0.875rem;
+		}
+
+		.menu-options {
+			gap: 0.5rem;
+		}
+	}
+
+	/* Animacja wejścia dla przycisków */
+	.menu-button {
+		animation: buttonSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+	}
+
+	.menu-button:nth-child(1) {
+		animation-delay: 0.05s;
+	}
+	.menu-button:nth-child(2) {
+		animation-delay: 0.1s;
+	}
+	.menu-button:nth-child(3) {
+		animation-delay: 0.15s;
+	}
+	.menu-button:nth-child(4) {
+		animation-delay: 0.2s;
+	}
+	.menu-button:nth-child(5) {
+		animation-delay: 0.25s;
+	}
+
+	@keyframes buttonSlideIn {
+		from {
+			opacity: 0;
+			transform: translateX(-20px);
+		}
+		to {
+			opacity: 1;
+			transform: translateX(0);
+		}
+	}
+
+	/* Dark mode adjustments (opcjonalnie) */
+	@media (prefers-color-scheme: light) {
+		:root {
+			--bg-dark: #f5f5fa;
+			--bg-card: rgba(255, 255, 255, 0.95);
+			--text: #1a1a2e;
+			--text-dim: #6b6b8b;
+		}
+
+		.pause-overlay {
+			background: rgba(245, 245, 250, 0.85);
 		}
 	}
 </style>

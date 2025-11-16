@@ -1,29 +1,49 @@
-<script>
+<script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import * as THREE from 'three';
 
+	// Typy
+	type View = 'main' | 'singleplayer' | 'multiplayer' | 'login';
+
+	interface World {
+		id: number;
+		name: string;
+		lastPlayed: string;
+		seed: string;
+	}
+
+	interface BlockUserData {
+		speedX: number;
+		speedY: number;
+		speedZ: number;
+		rotSpeedX: number;
+		rotSpeedY: number;
+	}
+
 	// Stan aplikacji
-	let view = 'main'; // 'main' | 'singleplayer' | 'multiplayer' | 'login'
+	let view = $state<View>('main');
+	let nickname = $state('');
+	let isLoggedIn = $state(false);
 
-	let nickname = '';
-	let isLoggedIn = '';
-
-	let worlds = [
+	let worlds: World[] = [
 		{ id: 1, name: 'Crystal Caves', lastPlayed: '2 hours ago', seed: 'XK9P' },
 		{ id: 2, name: 'Sky Islands', lastPlayed: '1 day ago', seed: 'ZM4L' },
 		{ id: 3, name: 'Desert Oasis', lastPlayed: '3 days ago', seed: 'PW7N' }
 	];
 
-	let serverAddress = '';
-	let loginEmail = '';
-	let loginPassword = '';
+	let serverAddress = $state('');
+	let loginEmail = $state('');
+	let loginPassword = $state('');
 
 	// Three.js refs
-	let canvasContainer;
-	let renderer, scene, camera, animationId;
-	let blocks = [];
+	let canvasContainer: HTMLDivElement;
+	let renderer: THREE.WebGLRenderer | null = null;
+	let scene: THREE.Scene | null = null;
+	let camera: THREE.PerspectiveCamera | null = null;
+	let animationId: number | null = null;
+	let blocks: THREE.Mesh[] = [];
 
-	function initThreeJS() {
+	function initThreeJS(): void {
 		const container = canvasContainer;
 		if (!container) return;
 
@@ -59,13 +79,14 @@
 			cube.rotation.x = Math.random() * Math.PI;
 			cube.rotation.y = Math.random() * Math.PI;
 
-			cube.userData = {
+			const userData: BlockUserData = {
 				speedX: (Math.random() - 0.5) * 0.04,
 				speedY: (Math.random() - 0.5) * 0.04,
 				speedZ: (Math.random() - 0.5) * 0.04,
 				rotSpeedX: (Math.random() - 0.5) * 0.02,
 				rotSpeedY: (Math.random() - 0.5) * 0.02
 			};
+			cube.userData = userData;
 
 			scene.add(cube);
 			blocks.push(cube);
@@ -87,16 +108,18 @@
 		animate();
 	}
 
-	function animate() {
+	function animate(): void {
 		animationId = requestAnimationFrame(animate);
 
 		blocks.forEach((block) => {
-			block.position.x += block.userData.speedX;
-			block.position.y += block.userData.speedY;
-			block.position.z += block.userData.speedZ;
+			const data = block.userData as BlockUserData;
 
-			block.rotation.x += block.userData.rotSpeedX;
-			block.rotation.y += block.userData.rotSpeedY;
+			block.position.x += data.speedX;
+			block.position.y += data.speedY;
+			block.position.z += data.speedZ;
+
+			block.rotation.x += data.rotSpeedX;
+			block.rotation.y += data.rotSpeedY;
 
 			// Wrap
 			if (Math.abs(block.position.x) > 20) block.position.x *= -1;
@@ -104,14 +127,18 @@
 			if (Math.abs(block.position.z) > 20) block.position.z *= -1;
 		});
 
-		camera.position.x = Math.sin(Date.now() * 0.0001) * 2;
-		camera.position.y = Math.cos(Date.now() * 0.0001) * 2;
-		camera.lookAt(0, 0, 0);
+		if (camera) {
+			camera.position.x = Math.sin(Date.now() * 0.0001) * 2;
+			camera.position.y = Math.cos(Date.now() * 0.0001) * 2;
+			camera.lookAt(0, 0, 0);
+		}
 
-		renderer && renderer.render(scene, camera);
+		if (renderer && scene && camera) {
+			renderer.render(scene, camera);
+		}
 	}
 
-	function onResize() {
+	function onResize(): void {
 		if (!renderer || !camera || !canvasContainer) return;
 		camera.aspect = canvasContainer.clientWidth / canvasContainer.clientHeight;
 		camera.updateProjectionMatrix();
@@ -123,52 +150,62 @@
 	});
 
 	onDestroy(() => {
-		//cancelAnimationFrame(animationId);
+		if (animationId !== null) {
+			cancelAnimationFrame(animationId);
+		}
 		window.removeEventListener('resize', onResize);
-		if (renderer && renderer.domElement && renderer.domElement.parentNode)
+		if (renderer && renderer.domElement && renderer.domElement.parentNode) {
 			renderer.domElement.parentNode.removeChild(renderer.domElement);
-		// dispose
+		}
 		if (scene) {
 			scene.traverse((obj) => {
-				if (obj.geometry) obj.geometry.dispose && obj.geometry.dispose();
-				if (obj.material) {
-					if (Array.isArray(obj.material)) obj.material.forEach((m) => m.dispose && m.dispose());
-					else obj.material.dispose && obj.material.dispose();
+				if (obj instanceof THREE.Mesh) {
+					if (obj.geometry) obj.geometry.dispose();
+					if (obj.material) {
+						if (Array.isArray(obj.material)) {
+							obj.material.forEach((m) => m.dispose());
+						} else {
+							obj.material.dispose();
+						}
+					}
 				}
 			});
+		}
+		if (renderer) {
+			renderer.dispose();
 		}
 	});
 
 	// Akcje UI
-	function startSingleplayer() {
+	function startSingleplayer(): void {
 		if (nickname || isLoggedIn) {
 			view = 'singleplayer';
 		}
 	}
 
-	function startMultiplayer() {
+	function startMultiplayer(): void {
 		if (nickname || isLoggedIn) {
 			view = 'multiplayer';
 		}
 	}
 
-	function showLogin() {
+	function showLogin(): void {
 		view = 'login';
 	}
 
-	function goBack() {
+	function goBack(): void {
 		view = 'main';
 	}
 
-	function loadWorld(worldId) {
+	function loadWorld(worldId: number): void {
 		alert(`Ładowanie świata ID: ${worldId}...`);
 	}
 
-	function createNewWorld() {
+	function createNewWorld(): void {
 		alert('Otwieranie kreatora świata...');
 	}
 
-	function connectToServer() {
+	function connectToServer(): void {
 		if (serverAddress) {
 			alert(`Łączenie z serwerem: ${serverAddress}...`);
 		} else {
@@ -176,27 +213,23 @@
 		}
 	}
 
-	function quickConnect(server) {
+	function quickConnect(server: string): void {
 		alert(`Szybkie łączenie z: ${server}...`);
 	}
 
-	function performLogin() {
+	function performLogin(): void {
 		if (loginEmail && loginPassword) {
 			isLoggedIn = true;
 			nickname = loginEmail.split('@')[0];
-			localStorage.setItem('authToken', 'demo_token');
-			localStorage.setItem('nickname', nickname);
 			view = 'main';
 		} else {
 			alert('Wypełnij wszystkie pola!');
 		}
 	}
 
-	function logout() {
+	function logout(): void {
 		isLoggedIn = false;
 		nickname = '';
-		localStorage.removeItem('authToken');
-		localStorage.removeItem('nickname');
 	}
 </script>
 
@@ -204,7 +237,7 @@
 
 <div id="app" role="application">
 	{#if view !== 'main'}
-		<button class="back-btn" on:click={goBack} aria-label="Powrót">←</button>
+		<button class="back-btn" onclick={goBack} aria-label="Powrót">←</button>
 	{/if}
 
 	{#if view === 'main'}
@@ -219,7 +252,7 @@
 						type="text"
 						placeholder="Wpisz swoją nazwę..."
 						bind:value={nickname}
-						maxlength="16"
+						maxlength={16}
 						aria-required="true"
 					/>
 				</div>
@@ -231,23 +264,19 @@
 
 			<button
 				class="btn btn-primary"
-				on:click={startSingleplayer}
-				disabled={!nickname && !isLoggedIn}
-				aria-disabled={!nickname && !isLoggedIn}>⚡ Jednoosobowa</button
+				onclick={startSingleplayer}
+				disabled={!nickname && !isLoggedIn}>⚡ Jednoosobowa</button
 			>
 
-			<button
-				class="btn btn-primary"
-				on:click={startMultiplayer}
-				disabled={!nickname && !isLoggedIn}
-				aria-disabled={!nickname && !isLoggedIn}>🌐 Wieloosobowa</button
+			<button class="btn btn-primary" onclick={startMultiplayer} disabled={!nickname && !isLoggedIn}
+				>🌐 Wieloosobowa</button
 			>
 
 			{#if !isLoggedIn}
 				<div class="divider">lub</div>
-				<button class="btn btn-secondary" on:click={showLogin}>🔐 Zaloguj się</button>
+				<button class="btn btn-secondary" onclick={showLogin}>🔐 Zaloguj się</button>
 			{:else}
-				<button class="btn btn-text" on:click={logout}>Wyloguj ({nickname})</button>
+				<button class="btn btn-text" onclick={logout}>Wyloguj ({nickname})</button>
 			{/if}
 		</div>
 	{/if}
@@ -262,8 +291,8 @@
 						class="world-item"
 						role="button"
 						tabindex="0"
-						on:click={() => loadWorld(world.id)}
-						on:keypress={(e) => e.key === 'Enter' && loadWorld(world.id)}
+						onclick={() => loadWorld(world.id)}
+						onkeypress={(e) => e.key === 'Enter' && loadWorld(world.id)}
 					>
 						<div class="world-info">
 							<h3>{world.name}</h3>
@@ -273,7 +302,7 @@
 					</div>
 				{/each}
 			</div>
-			<button class="btn btn-primary" on:click={createNewWorld}>✨ Stwórz nowy świat</button>
+			<button class="btn btn-primary" onclick={createNewWorld}>✨ Stwórz nowy świat</button>
 		</div>
 	{/if}
 
@@ -291,7 +320,7 @@
 					aria-required="true"
 				/>
 			</div>
-			<button class="btn btn-primary" on:click={connectToServer}>🚀 Połącz</button>
+			<button class="btn btn-primary" onclick={connectToServer}>🚀 Połącz</button>
 
 			<div class="divider">Popularne serwery</div>
 
@@ -300,7 +329,8 @@
 					class="world-item"
 					role="button"
 					tabindex="0"
-					on:click={() => quickConnect('official.blockverse.io')}
+					onclick={() => quickConnect('official.blockverse.io')}
+					onkeypress={(e) => e.key === 'Enter' && quickConnect('official.blockverse.io')}
 				>
 					<div class="world-info">
 						<h3>🏆 Oficjalny serwer</h3>
@@ -312,7 +342,8 @@
 					class="world-item"
 					role="button"
 					tabindex="0"
-					on:click={() => quickConnect('creative.blockverse.io')}
+					onclick={() => quickConnect('creative.blockverse.io')}
+					onkeypress={(e) => e.key === 'Enter' && quickConnect('creative.blockverse.io')}
 				>
 					<div class="world-info">
 						<h3>🎨 Creative Hub</h3>
@@ -324,7 +355,8 @@
 					class="world-item"
 					role="button"
 					tabindex="0"
-					on:click={() => quickConnect('pvp.blockverse.io')}
+					onclick={() => quickConnect('pvp.blockverse.io')}
+					onkeypress={(e) => e.key === 'Enter' && quickConnect('pvp.blockverse.io')}
 				>
 					<div class="world-info">
 						<h3>⚔️ PvP Arena</h3>
@@ -362,10 +394,10 @@
 				/>
 			</div>
 
-			<button class="btn btn-primary" on:click={performLogin}>🔓 Zaloguj się</button>
+			<button class="btn btn-primary" onclick={performLogin}>🔓 Zaloguj się</button>
 			<button
 				class="btn btn-text"
-				on:click={() => alert('Funkcja rejestracji będzie dostępna wkrótce!')}
+				onclick={() => alert('Funkcja rejestracji będzie dostępna wkrótce!')}
 				>Nie masz konta? Zarejestruj się</button
 			>
 		</div>
@@ -542,9 +574,13 @@
 		color: white;
 		margin-bottom: 0.75rem;
 	}
-	.btn-primary:hover {
+	.btn-primary:hover:not(:disabled) {
 		transform: translateY(-2px);
 		box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4);
+	}
+	.btn-primary:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
 	}
 	.btn-secondary {
 		background: rgba(99, 102, 241, 0.1);
@@ -682,42 +718,9 @@
 		}
 	}
 
-	.loading-dots {
-		display: inline-block;
-	}
-	.loading-dots::after {
-		content: '.';
-		animation: dots 1.5s steps(4, end) infinite;
-	}
-	@keyframes dots {
-		0%,
-		20% {
-			content: '.';
-		}
-		40% {
-			content: '..';
-		}
-		60%,
-		100% {
-			content: '...';
-		}
-	}
-
 	:global(.btn:focus-visible),
 	:global(input:focus-visible) {
 		outline: 3px solid var(--primary);
 		outline-offset: 2px;
-	}
-
-	.sr-only {
-		position: absolute;
-		width: 1px;
-		height: 1px;
-		padding: 0;
-		margin: -1px;
-		overflow: hidden;
-		clip: rect(0, 0, 0, 0);
-		white-space: nowrap;
-		border-width: 0;
 	}
 </style>
