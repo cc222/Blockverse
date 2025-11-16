@@ -38,107 +38,233 @@
 {/if}
 
 <style>
+	:root {
+		--bg-overlay: rgba(5, 8, 20, 0.75);
+		--panel-bg: linear-gradient(180deg, rgba(18, 22, 40, 0.95), rgba(14, 17, 30, 0.95));
+		--panel-border: rgba(99, 102, 241, 0.12);
+		--accent: linear-gradient(90deg, #6366f1, #8b5cf6 50%, #3bd1b3 100%);
+		--accent-solid: #6366f1;
+		--muted: #9aa0c4;
+		--text: #e6e9ff;
+		--success: #10b981;
+		--glass: rgba(255, 255, 255, 0.03);
+		--radius: 16px;
+		--shadow-lg: 0 18px 40px rgba(2, 6, 23, 0.7);
+	}
+
+	/* Overlay */
 	.pause-overlay {
 		position: fixed;
-		top: 0;
-		left: 0;
-		width: 100%;
-		height: 100%;
-		background: rgba(0, 0, 0, 0.7);
-		backdrop-filter: blur(4px);
+		inset: 0;
+		background: var(--bg-overlay);
+		backdrop-filter: blur(6px) saturate(1.05);
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		z-index: 1000;
-		animation: fadeIn 0.2s ease-out;
+		padding: 24px;
+		animation: fadeIn 180ms ease-out;
 	}
 
 	@keyframes fadeIn {
 		from {
 			opacity: 0;
+			transform: scale(0.995);
 		}
 		to {
 			opacity: 1;
+			transform: scale(1);
 		}
 	}
 
+	/* Card */
 	.pause-menu {
-		background: rgba(32, 32, 32, 0.95);
-		border: 4px solid #3a3a3a;
-		box-shadow:
-			0 0 0 2px #000,
-			0 8px 32px rgba(0, 0, 0, 0.8);
-		padding: 40px;
-		min-width: 400px;
-		animation: slideIn 0.3s ease-out;
-	}
-
-	@keyframes slideIn {
-		from {
-			transform: translateY(-20px);
-			opacity: 0;
-		}
-		to {
-			transform: translateY(0);
-			opacity: 1;
-		}
-	}
-
-	.menu-title {
-		font-family: 'Courier New', monospace;
-		font-size: 32px;
-		color: #ffffff;
-		text-align: center;
-		margin: 0 0 30px 0;
-		text-shadow: 3px 3px 0 #000;
-		letter-spacing: 2px;
-	}
-
-	.menu-options {
+		width: min(720px, 96%);
+		max-width: 720px;
+		background: var(--panel-bg);
+		border: 1px solid var(--panel-border);
+		border-radius: var(--radius);
+		padding: 28px;
+		box-shadow: var(--shadow-lg);
+		position: relative;
+		overflow: hidden;
 		display: flex;
 		flex-direction: column;
-		gap: 8px;
-		margin-bottom: 20px;
+		align-items: stretch;
+		gap: 18px;
 	}
 
+	/* Title */
+	.menu-title {
+		margin: 0;
+		font-family:
+			'Inter',
+			system-ui,
+			-apple-system,
+			'Segoe UI',
+			Roboto,
+			'Helvetica Neue',
+			Arial;
+		font-weight: 800;
+		letter-spacing: -0.02em;
+		font-size: 1.75rem;
+		color: var(--text);
+		text-align: center;
+		background: var(--accent);
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+		background-clip: text;
+		text-shadow: 0 6px 28px rgba(59, 209, 179, 0.04);
+	}
+
+	/* Options list */
+	.menu-options {
+		display: grid;
+		grid-template-columns: 1fr;
+		gap: 12px;
+		width: 100%;
+	}
+
+	/* Button base */
 	.menu-button {
-		font-family: 'Courier New', monospace;
-		font-size: 18px;
-		padding: 12px 20px;
-		background: #6b6b6b;
-		border: 2px solid #000;
-		box-shadow:
-			inset -2px -4px 0 rgba(0, 0, 0, 0.4),
-			inset 2px 2px 0 rgba(255, 255, 255, 0.2);
-		color: #e0e0e0;
+		appearance: none;
+		-webkit-appearance: none;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 12px;
+		padding: 12px 18px;
+		background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01));
+		border: 1px solid rgba(255, 255, 255, 0.03);
+		border-radius: 12px;
+		color: var(--text);
+		font-family:
+			'Inter',
+			system-ui,
+			-apple-system,
+			'Segoe UI',
+			Roboto,
+			'Helvetica Neue',
+			Arial;
+		font-weight: 600;
+		font-size: 1rem;
 		cursor: pointer;
-		text-align: center;
-		transition: all 0.1s;
-		text-shadow: 2px 2px 0 #000;
+		transition:
+			transform 160ms cubic-bezier(0.2, 0.9, 0.3, 1),
+			box-shadow 160ms,
+			border-color 160ms,
+			background 160ms;
+		box-shadow: 0 6px 18px rgba(2, 6, 23, 0.45);
+		text-align: left;
+		outline: none;
 	}
 
-	.menu-button:hover,
-	.menu-button.selected {
-		background: #8b8b8b;
-		color: #ffff00;
-		transform: scale(1.02);
-		box-shadow:
-			inset -2px -4px 0 rgba(0, 0, 0, 0.3),
-			inset 2px 2px 0 rgba(255, 255, 255, 0.3);
+	.menu-button .label {
+		display: inline-block;
+		flex: 1 1 auto;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		color: var(--text);
 	}
 
+	.menu-button .opt-value {
+		flex: 0 0 auto;
+		font-family:
+			ui-monospace, SFMono-Regular, Menlo, Monaco, 'Roboto Mono', 'Courier New', monospace;
+		background: var(--glass);
+		padding: 6px 10px;
+		border-radius: 8px;
+		font-size: 0.9rem;
+		color: var(--muted);
+		border: 1px solid rgba(255, 255, 255, 0.03);
+	}
+
+	/* Hover / selected */
+	.menu-button:hover {
+		transform: translateY(-3px);
+		border-color: rgba(99, 102, 241, 0.22);
+		box-shadow: 0 20px 36px rgba(2, 6, 23, 0.65);
+		background: linear-gradient(180deg, rgba(99, 102, 241, 0.04), rgba(59, 209, 179, 0.02));
+	}
+
+	.menu-button.selected,
+	.menu-button[selected] {
+		/* subtle accent background + left accent bar */
+		background: linear-gradient(90deg, rgba(99, 102, 241, 0.06), rgba(59, 209, 179, 0.02));
+		border-color: rgba(99, 102, 241, 0.28);
+		position: relative;
+		box-shadow: 0 24px 48px rgba(2, 6, 23, 0.72);
+	}
+
+	.menu-button.selected::before {
+		content: '';
+		position: absolute;
+		left: 0;
+		top: 0;
+		bottom: 0;
+		width: 6px;
+		background: linear-gradient(180deg, #6366f1, #3bd1b3);
+		border-top-left-radius: 12px;
+		border-bottom-left-radius: 12px;
+	}
+
+	/* Focus visible for keyboard users */
+	.menu-button:focus-visible {
+		outline: 3px solid rgba(99, 102, 241, 0.18);
+		outline-offset: 4px;
+	}
+
+	/* Active press feedback */
 	.menu-button:active {
-		background: #5b5b5b;
-		box-shadow: inset 2px 4px 0 rgba(0, 0, 0, 0.5);
-		transform: scale(0.98);
+		transform: translateY(0);
+		box-shadow: 0 8px 14px rgba(2, 6, 23, 0.6);
 	}
 
+	/* Hint text */
 	.menu-hint {
-		font-family: 'Courier New', monospace;
-		font-size: 12px;
-		color: #888;
+		font-family:
+			'Inter',
+			system-ui,
+			-apple-system;
+		font-size: 0.85rem;
+		color: var(--muted);
 		text-align: center;
-		margin-top: 20px;
-		text-shadow: 1px 1px 0 #000;
+		margin-top: 6px;
+		opacity: 0.95;
+	}
+
+	/* Responsywność */
+	@media (max-width: 720px) {
+		.pause-menu {
+			width: 100%;
+			padding: 18px;
+			border-radius: 12px;
+		}
+
+		.menu-title {
+			font-size: 1.35rem;
+		}
+
+		.menu-button {
+			padding: 10px 14px;
+			font-size: 0.96rem;
+			border-radius: 10px;
+		}
+
+		.menu-button .opt-value {
+			padding: 4px 8px;
+			font-size: 0.82rem;
+		}
+	}
+
+	/* Reduced motion support */
+	@media (prefers-reduced-motion: reduce) {
+		.pause-overlay,
+		.pause-menu,
+		.menu-button {
+			animation: none;
+			transition: none;
+		}
 	}
 </style>
