@@ -3,13 +3,20 @@
 	import * as THREE from 'three';
 
 	// Typy
-	type View = 'main' | 'singleplayer' | 'multiplayer' | 'login';
+	type View = 'main' | 'singleplayer' | 'multiplayer' | 'login' | 'register';
 
 	interface World {
 		id: number;
 		name: string;
 		lastPlayed: string;
 		seed: string;
+	}
+
+	interface FavoriteServer {
+		id: number;
+		name: string;
+		address: string;
+		players?: number;
 	}
 
 	interface BlockUserData {
@@ -31,9 +38,23 @@
 		{ id: 3, name: 'Desert Oasis', lastPlayed: '3 days ago', seed: 'PW7N' }
 	];
 
+	let favoriteServers = $state<FavoriteServer[]>([
+		{ id: 1, name: '🏆 Oficjalny serwer', address: 'official.blockverse.io', players: 142 },
+		{ id: 2, name: '🎨 Creative Hub', address: 'creative.blockverse.io', players: 89 },
+		{ id: 3, name: '⚔️ PvP Arena', address: 'pvp.blockverse.io', players: 67 }
+	]);
+
 	let serverAddress = $state('');
 	let loginEmail = $state('');
 	let loginPassword = $state('');
+	let registerEmail = $state('');
+	let registerPassword = $state('');
+	let registerPasswordConfirm = $state('');
+	let registerNickname = $state('');
+
+	let newServerName = $state('');
+	let newServerAddress = $state('');
+	let showAddServerForm = $state(false);
 
 	// Three.js refs
 	let canvasContainer: HTMLDivElement;
@@ -193,8 +214,13 @@
 		view = 'login';
 	}
 
+	function showRegister(): void {
+		view = 'register';
+	}
+
 	function goBack(): void {
 		view = 'main';
+		showAddServerForm = false;
 	}
 
 	function loadWorld(worldId: number): void {
@@ -222,14 +248,112 @@
 			isLoggedIn = true;
 			nickname = loginEmail.split('@')[0];
 			view = 'main';
+			loginEmail = '';
+			loginPassword = '';
 		} else {
 			alert('Wypełnij wszystkie pola!');
 		}
 	}
 
+	function performRegister(): void {
+		if (!registerEmail || !registerPassword || !registerPasswordConfirm || !registerNickname) {
+			alert('Wypełnij wszystkie pola!');
+			return;
+		}
+		if (registerPassword !== registerPasswordConfirm) {
+			alert('Hasła nie są identyczne!');
+			return;
+		}
+		if (registerNickname.length < 3) {
+			alert('Nick musi mieć minimum 3 znaki!');
+			return;
+		}
+
+		isLoggedIn = true;
+		nickname = registerNickname;
+		view = 'main';
+		registerEmail = '';
+		registerPassword = '';
+		registerPasswordConfirm = '';
+		registerNickname = '';
+		alert('Konto zostało utworzone!');
+	}
+
 	function logout(): void {
 		isLoggedIn = false;
 		nickname = '';
+	}
+
+	function addFavoriteServer(): void {
+		if (!newServerName || !newServerAddress) {
+			alert('Wypełnij nazwę i adres serwera!');
+			return;
+		}
+
+		const newServer: FavoriteServer = {
+			id: Date.now(),
+			name: newServerName,
+			address: newServerAddress
+		};
+
+		favoriteServers = [...favoriteServers, newServer];
+		newServerName = '';
+		newServerAddress = '';
+		showAddServerForm = false;
+	}
+
+	function removeFavoriteServer(id: number): void {
+		favoriteServers = favoriteServers.filter((s) => s.id !== id);
+	}
+
+	function handleNicknameInput(e: Event): void {
+		const target = e.target as HTMLInputElement;
+		nickname = target.value;
+	}
+
+	function handleServerAddressInput(e: Event): void {
+		const target = e.target as HTMLInputElement;
+		serverAddress = target.value;
+	}
+
+	function handleLoginEmailInput(e: Event): void {
+		const target = e.target as HTMLInputElement;
+		loginEmail = target.value;
+	}
+
+	function handleLoginPasswordInput(e: Event): void {
+		const target = e.target as HTMLInputElement;
+		loginPassword = target.value;
+	}
+
+	function handleRegisterEmailInput(e: Event): void {
+		const target = e.target as HTMLInputElement;
+		registerEmail = target.value;
+	}
+
+	function handleRegisterPasswordInput(e: Event): void {
+		const target = e.target as HTMLInputElement;
+		registerPassword = target.value;
+	}
+
+	function handleRegisterPasswordConfirmInput(e: Event): void {
+		const target = e.target as HTMLInputElement;
+		registerPasswordConfirm = target.value;
+	}
+
+	function handleRegisterNicknameInput(e: Event): void {
+		const target = e.target as HTMLInputElement;
+		registerNickname = target.value;
+	}
+
+	function handleNewServerNameInput(e: Event): void {
+		const target = e.target as HTMLInputElement;
+		newServerName = target.value;
+	}
+
+	function handleNewServerAddressInput(e: Event): void {
+		const target = e.target as HTMLInputElement;
+		newServerAddress = target.value;
 	}
 </script>
 
@@ -251,7 +375,8 @@
 						id="nickname"
 						type="text"
 						placeholder="Wpisz swoją nazwę..."
-						bind:value={nickname}
+						value={nickname}
+						oninput={handleNicknameInput}
 						maxlength={16}
 						aria-required="true"
 					/>
@@ -275,6 +400,7 @@
 			{#if !isLoggedIn}
 				<div class="divider">lub</div>
 				<button class="btn btn-secondary" onclick={showLogin}>🔐 Zaloguj się</button>
+				<button class="btn btn-text" onclick={showRegister}>Nie masz konta? Zarejestruj się</button>
 			{:else}
 				<button class="btn btn-text" onclick={logout}>Wyloguj ({nickname})</button>
 			{/if}
@@ -316,53 +442,92 @@
 					id="server-address"
 					type="text"
 					placeholder="np. play.blockverse.io:25565"
-					bind:value={serverAddress}
+					value={serverAddress}
+					oninput={handleServerAddressInput}
 					aria-required="true"
 				/>
 			</div>
 			<button class="btn btn-primary" onclick={connectToServer}>🚀 Połącz</button>
 
-			<div class="divider">Popularne serwery</div>
+			<div class="divider">Ulubione serwery</div>
+
+			{#if !showAddServerForm}
+				<button
+					class="btn btn-secondary"
+					style="margin-bottom: 1rem;"
+					onclick={() => (showAddServerForm = true)}
+				>
+					➕ Dodaj serwer
+				</button>
+			{:else}
+				<div class="add-server-form">
+					<div class="input-group">
+						<label for="new-server-name">Nazwa serwera</label>
+						<input
+							id="new-server-name"
+							type="text"
+							placeholder="Mój serwer"
+							value={newServerName}
+							oninput={handleNewServerNameInput}
+						/>
+					</div>
+					<div class="input-group">
+						<label for="new-server-address">Adres</label>
+						<input
+							id="new-server-address"
+							type="text"
+							placeholder="server.example.com:25565"
+							value={newServerAddress}
+							oninput={handleNewServerAddressInput}
+						/>
+					</div>
+					<div style="display: flex; gap: 0.5rem;">
+						<button class="btn btn-primary" style="flex: 1;" onclick={addFavoriteServer}
+							>Dodaj</button
+						>
+						<button
+							class="btn btn-secondary"
+							style="flex: 1;"
+							onclick={() => (showAddServerForm = false)}>Anuluj</button
+						>
+					</div>
+				</div>
+			{/if}
 
 			<div class="world-list">
-				<div
-					class="world-item"
-					role="button"
-					tabindex="0"
-					onclick={() => quickConnect('official.blockverse.io')}
-					onkeypress={(e) => e.key === 'Enter' && quickConnect('official.blockverse.io')}
-				>
-					<div class="world-info">
-						<h3>🏆 Oficjalny serwer</h3>
-						<div class="world-meta">142 graczy online</div>
+				{#each favoriteServers as server}
+					<div class="world-item">
+						<div
+							class="world-info"
+							role="button"
+							tabindex="0"
+							style="flex: 1; cursor: pointer;"
+							onclick={() => quickConnect(server.address)}
+							onkeypress={(e) => e.key === 'Enter' && quickConnect(server.address)}
+						>
+							<h3>{server.name}</h3>
+							<div class="world-meta">
+								{#if server.players}
+									{server.players} graczy online
+								{:else}
+									{server.address}
+								{/if}
+							</div>
+						</div>
+						{#if server.id > 3}
+							<button
+								class="remove-btn"
+								onclick={(e) => {
+									e.stopPropagation();
+									removeFavoriteServer(server.id);
+								}}
+								aria-label="Usuń serwer"
+							>
+								✕
+							</button>
+						{/if}
 					</div>
-				</div>
-
-				<div
-					class="world-item"
-					role="button"
-					tabindex="0"
-					onclick={() => quickConnect('creative.blockverse.io')}
-					onkeypress={(e) => e.key === 'Enter' && quickConnect('creative.blockverse.io')}
-				>
-					<div class="world-info">
-						<h3>🎨 Creative Hub</h3>
-						<div class="world-meta">89 graczy online</div>
-					</div>
-				</div>
-
-				<div
-					class="world-item"
-					role="button"
-					tabindex="0"
-					onclick={() => quickConnect('pvp.blockverse.io')}
-					onkeypress={(e) => e.key === 'Enter' && quickConnect('pvp.blockverse.io')}
-				>
-					<div class="world-info">
-						<h3>⚔️ PvP Arena</h3>
-						<div class="world-meta">67 graczy online</div>
-					</div>
-				</div>
+				{/each}
 			</div>
 		</div>
 	{/if}
@@ -378,7 +543,8 @@
 					id="login-email"
 					type="email"
 					placeholder="twoj@email.pl"
-					bind:value={loginEmail}
+					value={loginEmail}
+					oninput={handleLoginEmailInput}
 					aria-required="true"
 				/>
 			</div>
@@ -389,17 +555,73 @@
 					id="login-password"
 					type="password"
 					placeholder="••••••••"
-					bind:value={loginPassword}
+					value={loginPassword}
+					oninput={handleLoginPasswordInput}
 					aria-required="true"
 				/>
 			</div>
 
 			<button class="btn btn-primary" onclick={performLogin}>🔓 Zaloguj się</button>
-			<button
-				class="btn btn-text"
-				onclick={() => alert('Funkcja rejestracji będzie dostępna wkrótce!')}
-				>Nie masz konta? Zarejestruj się</button
-			>
+			<button class="btn btn-text" onclick={showRegister}>Nie masz konta? Zarejestruj się</button>
+		</div>
+	{/if}
+
+	{#if view === 'register'}
+		<h1 class="logo">BLOCKVERSE</h1>
+		<div class="card">
+			<h2 style="margin-bottom:1.5rem;font-size:1.5rem;color:var(--text);">Rejestracja</h2>
+
+			<div class="input-group">
+				<label for="register-nickname">Nazwa gracza</label>
+				<input
+					id="register-nickname"
+					type="text"
+					placeholder="Twój nick"
+					value={registerNickname}
+					oninput={handleRegisterNicknameInput}
+					maxlength={16}
+					aria-required="true"
+				/>
+			</div>
+
+			<div class="input-group">
+				<label for="register-email">Email</label>
+				<input
+					id="register-email"
+					type="email"
+					placeholder="twoj@email.pl"
+					value={registerEmail}
+					oninput={handleRegisterEmailInput}
+					aria-required="true"
+				/>
+			</div>
+
+			<div class="input-group">
+				<label for="register-password">Hasło</label>
+				<input
+					id="register-password"
+					type="password"
+					placeholder="••••••••"
+					value={registerPassword}
+					oninput={handleRegisterPasswordInput}
+					aria-required="true"
+				/>
+			</div>
+
+			<div class="input-group">
+				<label for="register-password-confirm">Potwierdź hasło</label>
+				<input
+					id="register-password-confirm"
+					type="password"
+					placeholder="••••••••"
+					value={registerPasswordConfirm}
+					oninput={handleRegisterPasswordConfirmInput}
+					aria-required="true"
+				/>
+			</div>
+
+			<button class="btn btn-primary" onclick={performRegister}>📝 Zarejestruj się</button>
+			<button class="btn btn-text" onclick={showLogin}>Masz już konto? Zaloguj się</button>
 		</div>
 	{/if}
 </div>
@@ -421,6 +643,7 @@
 		--text-dim: #a0a0c0;
 		--accent: #f59e0b;
 		--success: #10b981;
+		--danger: #ef4444;
 		--border: rgba(99, 102, 241, 0.3);
 	}
 
@@ -488,6 +711,8 @@
 		padding: 2.5rem;
 		width: 100%;
 		max-width: 500px;
+		max-height: 85vh;
+		overflow-y: auto;
 		box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
 		animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 	}
@@ -597,6 +822,7 @@
 		color: var(--text-dim);
 		padding: 0.5rem;
 		font-size: 0.875rem;
+		text-transform: none;
 	}
 	.btn-text:hover {
 		color: var(--text);
@@ -613,16 +839,18 @@
 		border-radius: 12px;
 		padding: 1rem;
 		margin-bottom: 0.75rem;
-		cursor: pointer;
 		transition: all 0.3s ease;
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
+		gap: 1rem;
 	}
 	.world-item:hover {
 		border-color: var(--primary);
 		background: rgba(99, 102, 241, 0.1);
-		transform: translateX(4px);
+	}
+	.world-info {
+		flex: 1;
 	}
 	.world-info h3 {
 		font-size: 1.125rem;
@@ -640,6 +868,34 @@
 		border-radius: 6px;
 		font-size: 0.875rem;
 		color: var(--accent);
+	}
+
+	.remove-btn {
+		background: rgba(239, 68, 68, 0.1);
+		border: 2px solid var(--danger);
+		color: var(--danger);
+		width: 32px;
+		height: 32px;
+		border-radius: 8px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		cursor: pointer;
+		transition: all 0.3s ease;
+		font-size: 1.25rem;
+		flex-shrink: 0;
+	}
+	.remove-btn:hover {
+		background: rgba(239, 68, 68, 0.2);
+		transform: scale(1.1);
+	}
+
+	.add-server-form {
+		background: rgba(15, 15, 35, 0.4);
+		border: 2px solid var(--border);
+		border-radius: 12px;
+		padding: 1rem;
+		margin-bottom: 1rem;
 	}
 
 	.divider {
