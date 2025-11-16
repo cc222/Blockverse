@@ -1,4 +1,3 @@
-import { GameManager } from '$lib/game/GameManger';
 import { DebugMenu } from './DebugMenu';
 import { InterfaceSettingMenu } from './InterfaceSettingMenu';
 import { Menu } from './Menu.svelte';
@@ -35,7 +34,7 @@ export class SettingsMenu {
 						label: 'Wyjdź',
 						action: () => {
 							this.instance.closeMenu();
-							GameManager.instance.playerManager.controls.enterPointerLock();
+							this.instance.gameManager?.playerManager.controls.enterPointerLock();
 						}
 					})
 				],

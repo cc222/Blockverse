@@ -1,4 +1,3 @@
-import { GameManager } from '$lib/game/GameManger';
 import { EStatsPosition, StatsOverlayManager } from '$lib/game/Managers/StatsOverlayManager';
 import { MenuLocalStorageKeys } from '$lib/localStorge/menu/MenuLocalStorageKeys';
 import { Menu } from './Menu.svelte';
@@ -66,7 +65,7 @@ export class InterfaceSettingMenu {
 							label: 'Wyjdź',
 							action: () => {
 								this.instance.closeMenu();
-								GameManager.instance.playerManager.controls.enterPointerLock();
+								this.instance.gameManager?.playerManager.controls.enterPointerLock();
 							}
 						})
 						//{ label: 'Powrót do głownego menu', action: () => InterfaceSetting.instance.closeMenu() },

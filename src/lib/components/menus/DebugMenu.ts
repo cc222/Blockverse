@@ -1,4 +1,3 @@
-import { GameManager } from '$lib/game/GameManger';
 import { setDebugAtlasIsEnabled } from '$lib/game/textures/textureAtlas';
 import { MenuLocalStorageKeys } from '$lib/localStorge/menu/MenuLocalStorageKeys';
 import { Menu } from './Menu.svelte';
@@ -33,7 +32,7 @@ export class DebugMenu {
 						label: 'Wyjdź',
 						action: () => {
 							this.instance.closeMenu();
-							GameManager.instance.playerManager.controls.enterPointerLock();
+							this.instance.gameManager?.playerManager.controls.enterPointerLock();
 						}
 					})
 				],

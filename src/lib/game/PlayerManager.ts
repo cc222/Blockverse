@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GameControlsManager } from './GameControlsManager';
 import { WorldManager } from './world/WorldManager';
 import { ThreeManager } from './Managers/ThreeManager';
+import { GameManager } from './Managers/GameManger';
 
 export class PlayerManager {
 	controls: GameControlsManager;
@@ -13,8 +14,11 @@ export class PlayerManager {
 	private lastAttackTime = 0;
 	private lastInteractTime = 0;
 
-	constructor(threeManager: ThreeManager) {
-		this.controls = new GameControlsManager(threeManager.camera);
+	constructor(
+		private gameManager: GameManager,
+		private threeManager: ThreeManager
+	) {
+		this.controls = new GameControlsManager(gameManager, threeManager.camera);
 		this.camera = threeManager.camera;
 
 		// Wireframe podświetlenia

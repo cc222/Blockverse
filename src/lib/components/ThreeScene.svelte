@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import { GameManager } from '$lib/game/GameManger';
 	import { MainManager } from '$lib/game/Managers/MainManager';
 
 	let gameCanvas: HTMLCanvasElement;

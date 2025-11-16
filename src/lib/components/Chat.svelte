@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { ChatManager } from '$lib/game/Managers/ChatManager.svelte';
-	import { GameManager } from '$lib/game/GameManger';
 	import { onDestroy, onMount } from 'svelte';
 
 	let chatManager: ChatManager;

@@ -1,9 +1,9 @@
 // src/game/chunk.ts
 import { CHUNK_SIZE, HALO } from '$lib/game/GameConsts';
-import { GameManager } from '$lib/game/GameManger';
 import * as THREE from 'three';
 import { WorldManager } from '../WorldManager';
 import type { MeshData } from './MeshData';
+import { GameManager } from '$lib/game/Managers/GameManger';
 
 export class Chunk {
 	//TODO: add cashed borders voxels for meshing optimization
@@ -55,7 +55,7 @@ export class Chunk {
 		transparent: MeshData;
 	}> {
 		const halo = WorldManager.chunkManager.getHaloVoxels(this.cx, this.cy, this.cz);
-		return GameManager.instance.mesherService.build(
+		return GameManager.mesherService.build(
 			halo,
 			CHUNK_SIZE + 2 * HALO,
 			CHUNK_SIZE + 2 * HALO,

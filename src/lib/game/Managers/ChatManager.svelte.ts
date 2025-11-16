@@ -1,18 +1,21 @@
-import { GameManager } from '../GameManger';
-import { GameServer } from '../server/GameServer';
 import { BaseManager } from './BaseManager';
+import { GameManager } from './GameManger';
 
 export class ChatManager extends BaseManager {
 	messages: string[] = $state([]);
 	isEnabled: boolean = $state(false);
+	gameManager!: GameManager;
 
-	constructor(private gameServer: GameServer) {
+	constructor() {
 		super();
 		ChatManager.afterInitialization(() => {
 			this.isEnabled = true;
 		});
 		ChatManager.onDestroy(() => {
 			this.isEnabled = false;
+		});
+		GameManager.afterInitialization((instance) => {
+			this.gameManager = instance;
 		});
 	}
 
@@ -21,6 +24,6 @@ export class ChatManager extends BaseManager {
 	}
 
 	sendMessage(text: string) {
-		this.gameServer.sendChatMessage(GameManager.instance.myPlayerId, text);
+		this.gameManager.gameServer.sendChatMessage.reliable(this.gameManager.playerId, text);
 	}
 }

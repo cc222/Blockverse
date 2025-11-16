@@ -1,11 +1,11 @@
 import * as THREE from 'three';
 import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
-import { GameManager } from './GameManger';
 import { PauseMenu } from '$lib/components/menus/PauseMenu';
 import { Debug } from '$lib/debug/Debug';
 import { DebugType } from '$lib/debug/DebugType';
 import { DebugLevel } from '$lib/debug/DebugLevel';
 import { PhysicsManager } from './PhysicsManager';
+import { GameManager } from './Managers/GameManger';
 
 type GameControlEventName =
 	| 'unLock'
@@ -77,15 +77,18 @@ export class GameControlsManager extends THREE.EventDispatcher<GameControlsManag
 		this.controls.lock();
 	};
 
-	constructor(camera: THREE.PerspectiveCamera) {
+	constructor(
+		private gameManager: GameManager,
+		camera: THREE.PerspectiveCamera
+	) {
 		super();
-		this.controls = new PointerLockControls(camera, GameManager.instance.gameCanvas);
+		this.controls = new PointerLockControls(camera, gameManager.gameCanvas);
 		this.physicsManager = new PhysicsManager();
 		this.initListeners();
 	}
 
 	private initListeners() {
-		GameManager.instance.gameCanvas.addEventListener('click', this.enterPointerLock);
+		this.gameManager.gameCanvas.addEventListener('click', this.enterPointerLock);
 		this.controls.addEventListener('unlock', this._boundOnExitPointerLock);
 		window.addEventListener('keydown', this._boundKeyDown);
 		window.addEventListener('keyup', this._boundKeyUp);
@@ -94,7 +97,7 @@ export class GameControlsManager extends THREE.EventDispatcher<GameControlsManag
 	}
 
 	dispose() {
-		GameManager.instance.gameCanvas.removeEventListener('click', this.enterPointerLock);
+		this.gameManager.gameCanvas.removeEventListener('click', this.enterPointerLock);
 		this.controls.removeEventListener('unlock', this._boundOnExitPointerLock);
 		window.removeEventListener('keydown', this._boundKeyDown);
 		window.removeEventListener('keyup', this._boundKeyUp);

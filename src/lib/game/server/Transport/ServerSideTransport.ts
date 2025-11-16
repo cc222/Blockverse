@@ -9,8 +9,10 @@ export class ServerSideTransport implements RpcTransport {
 			this.onReceive?.(method, args);
 		});
 	}
-
-	call(method: string, args: unknown[]) {
+	callReliable(method: string, args: unknown[]): void {
+		this.socket.emit('rpc', { method, args });
+	}
+	callUnreliable(method: string, args: unknown[]): void {
 		this.socket.emit('rpc', { method, args });
 	}
 }

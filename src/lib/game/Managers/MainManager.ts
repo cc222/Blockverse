@@ -1,30 +1,37 @@
-import { GameManager } from '../GameManger';
 import { createTextureAtlas } from '../textures/textureAtlas';
 //import { createTextureAtlas } from '../textures/textureAtlas';
 import { BaseManager } from './BaseManager';
 import { ControlsManager } from './ControlsManager';
+import { GameManager } from './GameManger';
 import { MenuManager } from './MenuManager.svelte';
 
 export class MainManager extends BaseManager {
-	private gameManagerDispose: (() => void) | null = null;
 	public static instance: MainManager;
 	public menuManager!: MenuManager;
+	private controlsManager!: ControlsManager;
+	private gameManager?: GameManager;
 	//public gameManager!: GameManager;
 	constructor(public gameCanvas: HTMLCanvasElement) {
 		super();
 		MainManager.instance = this;
 		MainManager.afterInitialization(async () => {
 			await createTextureAtlas();
-			await ControlsManager.getInstance();
-			this.menuManager = await MenuManager.getInstance();
-			// ważne: await i przechowanie dispose
-			const maybeDispose = await GameManager.initialize(gameCanvas);
-			// jeśli initialize zwraca dispose lub promise<dispose>
-			this.gameManagerDispose = typeof maybeDispose === 'function' ? maybeDispose : null;
+			this.controlsManager = await ControlsManager.getInstance();
+			this.menuManager = await MenuManager.getInstance(this.controlsManager);
+			await this.startGame();
 		});
 		MainManager.onDestroy(() => {
-			this.gameManagerDispose?.();
-			this.gameManagerDispose = null;
+			this.stopGame();
+			MenuManager.destroy();
+			ControlsManager.destroy();
+			GameManager.destroy();
 		});
+	}
+
+	async startGame() {
+		this.gameManager = await GameManager.getInstance('test', this.gameCanvas);
+	}
+	async stopGame() {
+		await GameManager.destroy();
 	}
 }

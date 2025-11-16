@@ -4,6 +4,7 @@ import { Menu } from '../../components/menus/Menu.svelte';
 import { PauseMenu } from '../../components/menus/PauseMenu';
 import { SettingsMenu } from '../../components/menus/SettingsMenu';
 import { BaseManager } from './BaseManager';
+import { ControlsManager } from './ControlsManager';
 
 export class MenuManager extends BaseManager {
 	private menus = [
@@ -15,9 +16,21 @@ export class MenuManager extends BaseManager {
 
 	activeMenu = $state<Menu | null>(null);
 
-	public constructor() {
+	onEscapeKeyDown = () => {
+		if (this.activeMenu) {
+			this._closeActiveMenu();
+		} else {
+			PauseMenu.instance.openMenu();
+		}
+	};
+
+	public constructor(private controlsManager: ControlsManager) {
 		super();
 		this.initializeAndLoadFromStorageAllMenus();
+		controlsManager.addEventListener('escapeKeyDown', this.onEscapeKeyDown);
+		MenuManager.onDestroy(() => {
+			controlsManager.removeEventListener('escapeKeyDown', this.onEscapeKeyDown);
+		});
 	}
 	/**
 	 * Otwórz konkretne menu

@@ -10,7 +10,11 @@ export class SocketTransport implements RpcTransport {
 		});
 	}
 
-	call(method: string, args: unknown[]) {
+	callReliable(method: string, args: unknown[]): void {
+		//@ts-expect-error fix
+		this.socket.emit('rpc', { method, args });
+	}
+	callUnreliable(method: string, args: unknown[]): void {
 		//@ts-expect-error fix
 		this.socket.emit('rpc', { method, args });
 	}

@@ -1,4 +1,5 @@
 import { ControlsManager } from '$lib/game/Managers/ControlsManager';
+import { GameManager } from '$lib/game/Managers/GameManger';
 import { MainManager } from '$lib/game/Managers/MainManager';
 import type { IMenuOption } from './MenuOption.svelte';
 export class Menu {
@@ -9,6 +10,7 @@ export class Menu {
 		'Użyj strzałek ↑↓ lub myszy do nawigacji • Enter lub kliknij aby wybrać • ESC aby wrócić';
 	menuOptions: IMenuOption[] = $state([]);
 	controlsManager?: ControlsManager;
+	gameManager?: GameManager;
 
 	initializeFromStorage() {
 		this.menuOptions.forEach((option) => {
@@ -37,6 +39,12 @@ export class Menu {
 		ControlsManager.afterInitialization((instance) => {
 			this.controlsManager = instance;
 		});
+		GameManager.afterInitialization((instance) => {
+			this.gameManager = instance;
+		});
+		GameManager.onDestroy(() => {
+			this.gameManager = undefined;
+		});
 	}
 
 	onMenuClose?: () => void;
@@ -51,10 +59,6 @@ export class Menu {
 		this.closeMenu();
 		this.onMenuExit?.();
 	}
-
-	_boundEscapeKeyDown = () => {
-		this.exitMenu();
-	};
 	_boundEnterKeyDown = () => {
 		this.menuOptions[this.selectedOption].onClick();
 	};
@@ -76,13 +80,11 @@ export class Menu {
 	}
 
 	initListeners() {
-		this.controlsManager?.addEventListener('escapeKeyUp', this._boundEscapeKeyDown);
 		this.controlsManager?.addEventListener('enterKeyDown', this._boundEnterKeyDown);
 		this.controlsManager?.addEventListener('forwardKeyDown', this._bundForwardKeyDown);
 		this.controlsManager?.addEventListener('backwardKeyDown', this._boundDownKeyDown);
 	}
 	disposeListeners() {
-		this.controlsManager?.removeEventListener('escapeKeyUp', this._boundEscapeKeyDown);
 		this.controlsManager?.removeEventListener('enterKeyDown', this._boundEnterKeyDown);
 		this.controlsManager?.removeEventListener('forwardKeyDown', this._bundForwardKeyDown);
 		this.controlsManager?.removeEventListener('backwardKeyDown', this._boundDownKeyDown);
