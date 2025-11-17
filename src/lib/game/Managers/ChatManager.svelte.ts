@@ -2,25 +2,20 @@ import { BaseManager } from './BaseManager';
 import { GameManager } from './GameManger';
 
 export class ChatManager extends BaseManager {
-	messages: string[] = $state([]);
+	messages: string[] = $state<string[]>([]);
 	isEnabled: boolean = $state(false);
-	gameManager!: GameManager;
 
-	constructor() {
+	constructor(private gameManager: GameManager) {
 		super();
-		ChatManager.afterInitialization(() => {
-			this.isEnabled = true;
-		});
-		ChatManager.onDestroy(() => {
-			this.isEnabled = false;
-		});
-		GameManager.afterInitialization((instance) => {
-			this.gameManager = instance;
-		});
+		this.isEnabled = true;
+	}
+
+	protected async onDestroy(): Promise<void> {
+		this.isEnabled = false;
 	}
 
 	addMessage(text: string) {
-		this.messages.push(text);
+		this.messages = [...this.messages, text];
 	}
 
 	sendMessage(text: string) {

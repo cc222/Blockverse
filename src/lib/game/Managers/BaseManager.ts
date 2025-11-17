@@ -7,7 +7,6 @@ const ON_DESTROY_CALLBACKS = Symbol('onDestroyCallbacks');
 const IS_INITIALIZED = Symbol('isInitialized');
 const IS_DESTROYED = Symbol('isDestroyed');
 const INSTANCE = Symbol('instance');
-const CALLBACKS_REGISTERED = Symbol('callbacksRegistered'); // NOWE!
 
 export interface ManagerConstructor {
 	[AFTER_INIT_CALLBACKS]?: Callback<any>[];
@@ -15,18 +14,10 @@ export interface ManagerConstructor {
 	[IS_INITIALIZED]?: boolean;
 	[IS_DESTROYED]?: boolean;
 	[INSTANCE]?: BaseManager;
-	[CALLBACKS_REGISTERED]?: boolean; // NOWE!
 }
 
 export abstract class BaseManager {
-	protected constructor() {
-		// Zarejestruj callbacki tylko RAZ dla tej klasy
-		const ctor = this.constructor as ManagerConstructor;
-		if (!ctor[CALLBACKS_REGISTERED]) {
-			ctor[CALLBACKS_REGISTERED] = true;
-			this.registerCallbacks();
-		}
-	}
+	protected constructor() {}
 
 	/**
 	 * Override this method to register static callbacks for this class.
@@ -92,6 +83,9 @@ export abstract class BaseManager {
 	private static getInstance_internal(ctor: ManagerConstructor): BaseManager | undefined {
 		return ctor[INSTANCE];
 	}
+
+	//only for svelte
+	public static instance? = (this as ManagerConstructor)[INSTANCE];
 
 	/** Set instance for this specific class */
 	private static setInstance(ctor: ManagerConstructor, instance: BaseManager | undefined): void {
@@ -179,16 +173,16 @@ export abstract class BaseManager {
 	}
 
 	/** Fully type-safe singleton */
-	public static async getInstance<Args extends unknown[], T extends BaseManager>(
+	public static getInstance<Args extends unknown[], T extends BaseManager>(
 		this: { new (...args: Args): T } & ManagerConstructor,
 		...args: Args
-	): Promise<T> {
+	): T {
 		const existingInstance = BaseManager.getInstance_internal(this);
 
 		if (!existingInstance) {
 			const newInstance = new this(...args);
 			BaseManager.setInstance(this, newInstance);
-			await (this as unknown as typeof BaseManager).initialize();
+			(this as unknown as typeof BaseManager).initialize();
 			return newInstance;
 		}
 

@@ -27,14 +27,6 @@
 		players?: number;
 	}
 
-	interface BlockUserData {
-		speedX: number;
-		speedY: number;
-		speedZ: number;
-		rotSpeedX: number;
-		rotSpeedY: number;
-	}
-
 	interface Friend {
 		id: number;
 		nickname: string;
@@ -87,140 +79,12 @@
 	let renderer: THREE.WebGLRenderer | null = null;
 	let scene: THREE.Scene | null = null;
 	let camera: THREE.PerspectiveCamera | null = null;
-	let animationId: number | null = null;
-	let blocks: THREE.Mesh[] = [];
-
-	function initThreeJS(): void {
-		const container = canvasContainer;
-		if (!container) return;
-
-		scene = new THREE.Scene();
-		camera = new THREE.PerspectiveCamera(
-			75,
-			container.clientWidth / container.clientHeight,
-			0.1,
-			1000
-		);
-		camera.position.z = 30;
-
-		renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-		renderer.setSize(container.clientWidth, container.clientHeight);
-		renderer.setPixelRatio(window.devicePixelRatio || 1);
-		container.appendChild(renderer.domElement);
-
-		const geometry = new THREE.BoxGeometry(1, 1, 1);
-		const colors = [0x6366f1, 0x8b5cf6, 0xf59e0b, 0x10b981];
-
-		for (let i = 0; i < 50; i++) {
-			const material = new THREE.MeshPhongMaterial({
-				color: colors[Math.floor(Math.random() * colors.length)],
-				transparent: true,
-				opacity: 0.75
-			});
-			const cube = new THREE.Mesh(geometry, material);
-
-			cube.position.x = (Math.random() - 0.5) * 40;
-			cube.position.y = (Math.random() - 0.5) * 40;
-			cube.position.z = (Math.random() - 0.5) * 40;
-
-			cube.rotation.x = Math.random() * Math.PI;
-			cube.rotation.y = Math.random() * Math.PI;
-
-			const userData: BlockUserData = {
-				speedX: (Math.random() - 0.5) * 0.04,
-				speedY: (Math.random() - 0.5) * 0.04,
-				speedZ: (Math.random() - 0.5) * 0.04,
-				rotSpeedX: (Math.random() - 0.5) * 0.02,
-				rotSpeedY: (Math.random() - 0.5) * 0.02
-			};
-			cube.userData = userData;
-
-			scene.add(cube);
-			blocks.push(cube);
-		}
-
-		const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
-		scene.add(ambientLight);
-
-		const pointLight1 = new THREE.PointLight(0x6366f1, 1, 100);
-		pointLight1.position.set(10, 10, 10);
-		scene.add(pointLight1);
-
-		const pointLight2 = new THREE.PointLight(0x8b5cf6, 1, 100);
-		pointLight2.position.set(-10, -10, -10);
-		scene.add(pointLight2);
-
-		window.addEventListener('resize', onResize);
-
-		animate();
-	}
-
-	function animate(): void {
-		animationId = requestAnimationFrame(animate);
-
-		blocks.forEach((block) => {
-			const data = block.userData as BlockUserData;
-
-			block.position.x += data.speedX;
-			block.position.y += data.speedY;
-			block.position.z += data.speedZ;
-
-			block.rotation.x += data.rotSpeedX;
-			block.rotation.y += data.rotSpeedY;
-
-			// Wrap
-			if (Math.abs(block.position.x) > 20) block.position.x *= -1;
-			if (Math.abs(block.position.y) > 20) block.position.y *= -1;
-			if (Math.abs(block.position.z) > 20) block.position.z *= -1;
-		});
-
-		if (camera) {
-			camera.position.x = Math.sin(Date.now() * 0.0001) * 2;
-			camera.position.y = Math.cos(Date.now() * 0.0001) * 2;
-			camera.lookAt(0, 0, 0);
-		}
-
-		if (renderer && scene && camera) {
-			renderer.render(scene, camera);
-		}
-	}
-
-	function onResize(): void {
-		if (!renderer || !camera || !canvasContainer) return;
-		camera.aspect = canvasContainer.clientWidth / canvasContainer.clientHeight;
-		camera.updateProjectionMatrix();
-		renderer.setSize(canvasContainer.clientWidth, canvasContainer.clientHeight);
-	}
 
 	onMount(() => {
-		initThreeJS();
+		//initThreeJS();
 	});
 
 	onDestroy(() => {
-		if (animationId !== null) {
-			cancelAnimationFrame(animationId);
-		}
-		window.removeEventListener('resize', onResize);
-		if (renderer && renderer.domElement && renderer.domElement.parentNode) {
-			renderer.domElement.parentNode.removeChild(renderer.domElement);
-		}
-		if (scene) {
-			scene.traverse((obj) => {
-				if (obj instanceof THREE.Mesh) {
-					if (obj.geometry) obj.geometry.dispose();
-					if (obj.material) {
-						if (Array.isArray(obj.material)) {
-							obj.material.forEach((m) => m.dispose());
-						} else {
-							obj.material.dispose();
-						}
-					}
-				}
-			});
-		}
-		if (renderer) {
-			renderer.dispose();
-		}
 	});
 
 	// Akcje UI

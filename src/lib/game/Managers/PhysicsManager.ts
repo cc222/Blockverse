@@ -1,7 +1,8 @@
 import * as THREE from 'three';
-import { WorldManager } from './world/WorldManager';
+import { WorldManager } from '../world/WorldManager';
+import { BaseManager } from './BaseManager';
 
-export class PhysicsManager {
+export class PhysicsManager extends BaseManager {
 	// Player physics properties
 	private velocity = new THREE.Vector3();
 	private readonly gravity = -25;
@@ -16,7 +17,9 @@ export class PhysicsManager {
 	private isGrounded = false;
 	private canJump = true;
 
-	constructor() {}
+	constructor() {
+		super();
+	}
 
 	/**
 	 * Check if player's AABB collides with any solid blocks

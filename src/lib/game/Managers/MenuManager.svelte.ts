@@ -27,11 +27,13 @@ export class MenuManager extends BaseManager {
 	public constructor(private controlsManager: ControlsManager) {
 		super();
 		this.initializeAndLoadFromStorageAllMenus();
-		controlsManager.addEventListener('escapeKeyUp', this.onEscapeKeyUp);
-		MenuManager.onDestroy(() => {
-			controlsManager.removeEventListener('escapeKeyUp', this.onEscapeKeyUp);
-		});
+		this.controlsManager.addEventListener('escapeKeyUp', this.onEscapeKeyUp);
 	}
+
+	protected async onDestroy(): Promise<void> {
+		this.controlsManager.removeEventListener('escapeKeyUp', this.onEscapeKeyUp);
+	}
+
 	/**
 	 * Otwórz konkretne menu
 	 */

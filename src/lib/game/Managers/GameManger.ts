@@ -1,4 +1,3 @@
-import { PlayerManager } from '../PlayerManager';
 import { GameServer } from '../server/GameServer';
 import { LocalTransport } from '../server/Transport/LocalTransport';
 import { Transport, type GameServerProxy } from '../server/Transport/Transport';
@@ -6,14 +5,19 @@ import { MesherService } from '../world/chunk/MesherService';
 import { WorldManager } from '../world/WorldManager';
 import { BaseManager } from './BaseManager';
 import { ChatManager } from './ChatManager.svelte';
+import type { ControlsManager } from './ControlsManager';
+import { GameControlsManager } from './GameControlsManager';
+import { PhysicsManager } from './PhysicsManager';
+import { PlayerManager } from './PlayerManager';
 import { StatsOverlayManager } from './StatsOverlayManager';
 import { ThreeManager } from './ThreeManager';
 
 export class GameManager extends BaseManager {
-	threeManager!: ThreeManager;
 	statsOverlayManager!: StatsOverlayManager;
 	chatManager!: ChatManager;
 	playerManager!: PlayerManager;
+	gameControlsManager!: GameControlsManager;
+	physicsManager!: PhysicsManager;
 
 	gameServer: GameServerProxy;
 	static mesherService: MesherService;
@@ -24,7 +28,9 @@ export class GameManager extends BaseManager {
 
 	public constructor(
 		public playerId: string,
-		public gameCanvas: HTMLCanvasElement
+		public gameCanvas: HTMLCanvasElement,
+		private threeManager: ThreeManager,
+		private controlsManager: ControlsManager
 	) {
 		super();
 		this.prevFrameTime = performance.now();
@@ -36,10 +42,20 @@ export class GameManager extends BaseManager {
 	}
 
 	protected async onInitialize(): Promise<void> {
-		this.threeManager = await ThreeManager.getInstance(this.gameCanvas);
+		this.threeManager.setupSceneForGame();
 		this.statsOverlayManager = await StatsOverlayManager.getInstance();
-		this.chatManager = await ChatManager.getInstance();
-		this.playerManager = new PlayerManager(this, this.threeManager);
+		this.chatManager = await ChatManager.getInstance(this);
+		this.physicsManager = await PhysicsManager.getInstance();
+		this.gameControlsManager = new GameControlsManager(
+			this,
+			this.controlsManager,
+			this.physicsManager,
+			this.threeManager.camera
+		);
+		this.playerManager = await PlayerManager.getInstance(
+			this.threeManager,
+			this.gameControlsManager
+		);
 		WorldManager.init(this.threeManager);
 		this.startLoop();
 	}
@@ -47,7 +63,6 @@ export class GameManager extends BaseManager {
 	protected async onDestroy(): Promise<void> {
 		this.stopLoop();
 		this.playerManager.dispose();
-		ThreeManager.destroy();
 		WorldManager.chunkManager.disposeAll();
 		ChatManager.destroy();
 	}

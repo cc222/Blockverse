@@ -34,7 +34,7 @@ export class SettingsMenu {
 						label: 'Wyjdź',
 						action: () => {
 							this.instance.closeMenu();
-							this.instance.gameManager?.playerManager.controls.enterPointerLock();
+							this.instance.gameManager?.gameControlsManager.enterPointerLock();
 						}
 					})
 				],

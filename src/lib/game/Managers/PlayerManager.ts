@@ -1,11 +1,10 @@
 import * as THREE from 'three';
-import { GameControlsManager } from './GameControlsManager';
-import { WorldManager } from './world/WorldManager';
-import { ThreeManager } from './Managers/ThreeManager';
-import { GameManager } from './Managers/GameManger';
+import type { ThreeManager } from './ThreeManager';
+import { WorldManager } from '../world/WorldManager';
+import { BaseManager } from './BaseManager';
+import type { GameControlsManager } from './GameControlsManager';
 
-export class PlayerManager {
-	controls: GameControlsManager;
+export class PlayerManager extends BaseManager {
 	private camera: THREE.Camera;
 	private highlightMesh: THREE.Mesh;
 
@@ -15,10 +14,10 @@ export class PlayerManager {
 	private lastInteractTime = 0;
 
 	constructor(
-		private gameManager: GameManager,
-		private threeManager: ThreeManager
+		private threeManager: ThreeManager,
+		private controls: GameControlsManager
 	) {
-		this.controls = new GameControlsManager(gameManager, threeManager.camera);
+		super();
 		this.camera = threeManager.camera;
 
 		// Wireframe podświetlenia

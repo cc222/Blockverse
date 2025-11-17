@@ -1,13 +1,9 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import * as THREE from 'three';
-import { BaseManager } from './BaseManager';
 import { Debug } from '$lib/debug/Debug';
 import { DebugType } from '$lib/debug/DebugType';
 import { DebugLevel } from '$lib/debug/DebugLevel';
+import { BaseManagerAndEventEmitter } from './BaseManagerAndEventEmiter';
 
-type GameControlEventName =
-	| 'unLock'
-	| 'lock'
+type EventsNames =
 	| 'forwardKeyUp'
 	| 'backwardKeyUp'
 	| 'rightKeyUp'
@@ -29,46 +25,18 @@ type GameControlEventName =
 	| 'attackKeyDown'
 	| 'interactKeyDown';
 
-type GameControlsManagerEvents = {
-	[K in GameControlEventName]: { type: K };
+type Events = {
+	[K in EventsNames]: { type: K };
 };
 
-export class ControlsManager extends BaseManager {
-	private _dispatcher = new THREE.EventDispatcher();
-
-	// Publiczne API typowane
-	addEventListener<K extends keyof GameControlsManagerEvents>(
-		type: K,
-		listener: (event: GameControlsManagerEvents[K]) => void
-	) {
-		// Delegacja do _dispatcher wymaga rzutowania
-		(this._dispatcher.addEventListener as any)(type, listener);
-	}
-
-	hasEventListener<K extends keyof GameControlsManagerEvents>(
-		type: K,
-		listener: (event: GameControlsManagerEvents[K]) => void
-	): boolean {
-		return (this._dispatcher.hasEventListener as any)(type, listener);
-	}
-
-	removeEventListener<K extends keyof GameControlsManagerEvents>(
-		type: K,
-		listener: (event: GameControlsManagerEvents[K]) => void
-	) {
-		(this._dispatcher.removeEventListener as any)(type, listener);
-	}
-
-	dispatchEvent<K extends keyof GameControlsManagerEvents>(event: GameControlsManagerEvents[K]) {
-		(this._dispatcher.dispatchEvent as any)(event);
-	}
-
+export class ControlsManager extends BaseManagerAndEventEmitter<Events> {
 	constructor() {
 		super();
 		this.initListeners();
-		ControlsManager.onDestroy(() => {
-			this.dispose();
-		});
+	}
+
+	protected async onDestroy(): Promise<void> {
+		this.removeListeners();
 	}
 
 	private onMouseDown = (e: MouseEvent) => {
@@ -166,15 +134,14 @@ export class ControlsManager extends BaseManager {
 	private initListeners() {
 		window.addEventListener('keydown', this.onKeyDown);
 		window.addEventListener('keyup', this.onKeyUp);
-		window.addEventListener('mousedown', (e) => this.onMouseDown(e));
-		window.addEventListener('mouseup', (e) => this.onMouseUp(e));
+		window.addEventListener('mousedown', this.onMouseDown);
+		window.addEventListener('mouseup', this.onMouseUp);
 	}
 
-	private dispose() {
+	private removeListeners() {
 		window.removeEventListener('keydown', this.onKeyDown);
 		window.removeEventListener('keyup', this.onKeyUp);
-		window.removeEventListener('mousedown', (e) => this.onMouseDown(e));
-		window.removeEventListener('mouseup', (e) => this.onMouseUp(e));
+		window.removeEventListener('mousedown', this.onMouseDown);
+		window.removeEventListener('mouseup', this.onMouseUp);
 	}
 }
-Object.assign(ControlsManager.prototype, THREE.EventDispatcher.prototype);
