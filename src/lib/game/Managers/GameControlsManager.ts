@@ -4,8 +4,8 @@ import { PauseMenu } from '$lib/components/menus/PauseMenu';
 import { Debug } from '$lib/debug/Debug';
 import { DebugType } from '$lib/debug/DebugType';
 import { DebugLevel } from '$lib/debug/DebugLevel';
-import { BaseManagerAndEventEmitter } from './BaseManagerAndEventEmiter';
-import type { GameManager } from './GameManger';
+import { BaseManagerAndEventEmiter } from './BaseManagerAndEventEmiter';
+import type { GameManager } from './GameManger.svelte';
 import type { PhysicsManager } from './PhysicsManager';
 import type { ControlsManager } from './ControlsManager';
 
@@ -15,7 +15,7 @@ type Events = {
 	[K in EventsNames]: { type: K };
 };
 
-export class GameControlsManager extends BaseManagerAndEventEmitter<Events> {
+export class GameControlsManager extends BaseManagerAndEventEmiter<Events> {
 	controls: PointerLockControls;
 	//velocity = new THREE.Vector3();
 	direction = new THREE.Vector3();
@@ -138,7 +138,7 @@ export class GameControlsManager extends BaseManagerAndEventEmitter<Events> {
 		this.controls.addEventListener('unlock', this._boundOnExitPointerLock);
 	}
 
-	dispose() {
+	async onDestroy() {
 		this.gameManager.gameCanvas.removeEventListener('click', this.enterPointerLock);
 		this.controls.removeEventListener('unlock', this._boundOnExitPointerLock);
 		for (const listener of this.controlListeners) {

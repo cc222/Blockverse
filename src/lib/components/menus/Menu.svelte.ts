@@ -1,16 +1,15 @@
 import { ControlsManager } from '$lib/game/Managers/ControlsManager';
-import { GameManager } from '$lib/game/Managers/GameManger';
-import { MainManager } from '$lib/game/Managers/MainManager';
-import type { IMenuOption } from './MenuOption.svelte';
+import { GameManager } from '$lib/game/Managers/GameManger.svelte';
+import { MainManager } from '$lib/game/Managers/MainManager.svelte';
+import type { MenuOption } from './MenuOption.svelte';
+
 export class Menu {
 	showMenu = $state(false);
 	selectedOption = $state(0);
 	title = 'Menu Gry';
 	menuHint =
 		'Użyj strzałek ↑↓ lub myszy do nawigacji • Enter lub kliknij aby wybrać • ESC aby wrócić';
-	menuOptions: IMenuOption[] = $state([]);
-	controlsManager?: ControlsManager;
-	gameManager?: GameManager;
+	menuOptions: MenuOption[] = $state([]);
 
 	initializeFromStorage() {
 		this.menuOptions.forEach((option) => {
@@ -25,7 +24,7 @@ export class Menu {
 		title,
 		menuHint
 	}: {
-		menuOptions: IMenuOption[];
+		menuOptions: MenuOption[];
 		onMenuClose?: () => void;
 		onMenuExit?: () => void;
 		title?: string;
@@ -36,15 +35,15 @@ export class Menu {
 		this.menuOptions = menuOptions;
 		this.onMenuClose = onMenuClose;
 		this.onMenuExit = onMenuExit;
-		ControlsManager.afterInitialization((instance) => {
-			this.controlsManager = instance;
-		});
-		GameManager.afterInitialization((instance) => {
-			this.gameManager = instance;
-		});
-		GameManager.onDestroy(() => {
-			this.gameManager = undefined;
-		});
+	}
+
+	// Gettery dla reaktywnego dostępu do managers
+	get controlsManager(): ControlsManager | undefined {
+		return ControlsManager.instance as ControlsManager | undefined;
+	}
+
+	get gameManager(): GameManager | undefined {
+		return GameManager.instance as GameManager | undefined;
 	}
 
 	onMenuClose?: () => void;
@@ -59,6 +58,7 @@ export class Menu {
 		this.closeMenu();
 		this.onMenuExit?.();
 	}
+
 	_boundEnterKeyDown = () => {
 		this.menuOptions[this.selectedOption].onClick();
 	};
@@ -83,14 +83,19 @@ export class Menu {
 	_bundForwardKeyDown = () => {
 		this._moveSelection(-1);
 	};
+
 	_boundDownKeyDown = () => {
 		this._moveSelection(1);
 	};
 
 	openMenu() {
 		this.showMenu = true;
+		if (!this.menuOptions?.length) return;
+		for (const option of this.menuOptions) {
+			option.onRender?.(option);
+		}
 		this.initListeners();
-		//temp xd
+		// temp xd
 		this._moveSelection(-1);
 		this._moveSelection(1);
 		MainManager.instance.menuManager._openMenu(this);
@@ -101,11 +106,13 @@ export class Menu {
 		this.controlsManager?.addEventListener('forwardKeyDown', this._bundForwardKeyDown);
 		this.controlsManager?.addEventListener('backwardKeyDown', this._boundDownKeyDown);
 	}
+
 	disposeListeners() {
 		this.controlsManager?.removeEventListener('enterKeyDown', this._boundEnterKeyDown);
 		this.controlsManager?.removeEventListener('forwardKeyDown', this._bundForwardKeyDown);
 		this.controlsManager?.removeEventListener('backwardKeyDown', this._boundDownKeyDown);
 	}
+
 	closeMenu() {
 		if (this.showMenu) {
 			MainManager.instance.menuManager._closeActiveMenu();

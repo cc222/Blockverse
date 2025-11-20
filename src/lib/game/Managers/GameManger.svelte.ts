@@ -35,24 +35,27 @@ export class GameManager extends BaseManager {
 		super();
 		this.prevFrameTime = performance.now();
 		GameManager.mesherService = new MesherService();
-		const transportLayer = new LocalTransport(new GameServer());
-		const localGame = new GameServer();
-		this.gameServer = Transport.createGameProxy(transportLayer, localGame);
+		const localGameServer = new GameServer(this);
+		const transportLayer = new LocalTransport(localGameServer);
+		this.gameServer = Transport.createGameProxy(transportLayer, localGameServer);
 		this.gameServer.addPlayer.reliable(this.playerId, transportLayer);
+		this.enable();
 	}
 
-	protected async onInitialize(): Promise<void> {
+	public async enable(): Promise<void> {
+		if (this.animationFrameId !== null) return;
+		console.log('starting game');
 		this.threeManager.setupSceneForGame();
-		this.statsOverlayManager = await StatsOverlayManager.getInstance();
-		this.chatManager = await ChatManager.getInstance(this);
-		this.physicsManager = await PhysicsManager.getInstance();
+		this.statsOverlayManager = await StatsOverlayManager.createInstance();
+		this.chatManager = await ChatManager.createInstance(this);
+		this.physicsManager = await PhysicsManager.createInstance();
 		this.gameControlsManager = new GameControlsManager(
 			this,
 			this.controlsManager,
 			this.physicsManager,
 			this.threeManager.camera
 		);
-		this.playerManager = await PlayerManager.getInstance(
+		this.playerManager = await PlayerManager.createInstance(
 			this.threeManager,
 			this.gameControlsManager
 		);
@@ -60,14 +63,15 @@ export class GameManager extends BaseManager {
 		this.startLoop();
 	}
 
-	protected async onDestroy(): Promise<void> {
+	public async onDestroy(): Promise<void> {
 		this.stopLoop();
-		this.playerManager.dispose();
+		this.playerManager.destroy();
 		WorldManager.chunkManager.disposeAll();
 		ChatManager.destroy();
 	}
 
 	private startLoop(): void {
+		console.log('starting game');
 		if (this.animationFrameId !== null) return;
 		this.loop();
 	}

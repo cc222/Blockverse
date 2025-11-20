@@ -1,10 +1,8 @@
-//import { GameManager } from '$lib/game/GameManger';
-import { GameManager } from '$lib/game/Managers/GameManger';
-import { MainManager } from '$lib/game/Managers/MainManager';
+import { GameState, MainManager } from '$lib/game/Managers/MainManager.svelte';
+import { MenuManager } from '$lib/game/Managers/MenuManager.svelte';
 import { Menu } from './Menu.svelte';
 import { MenuOption } from './MenuOption.svelte';
 import { SettingsMenu } from './SettingsMenu';
-//import { SettingsMenu } from './SettingsMenu';
 
 export class PauseMenu {
 	private static _instance: Menu;
@@ -13,23 +11,29 @@ export class PauseMenu {
 		if (!this._instance) {
 			const startGameOption = new MenuOption({
 				label: 'Rozpocznij grę',
+				onRender: (option) => {
+					option.isEnabled = MainManager.instance.gameState === GameState.MAIN_MENU;
+				},
 				action: () => {
-					MainManager.instance.startGame();
+					MainManager.instance?.startGame();
+					MenuManager.instance._closeActiveMenu();
 				}
 			});
-			GameManager.afterInitialization(() => {
-				startGameOption.isEnabled = false;
-			});
-			GameManager.onDestroy(() => {
-				startGameOption.isEnabled = true;
-			});
+
+			// Reaktywnie sprawdzaj czy gra jest włączona
+			// $effect(() => {
+			// 	startGameOption.isEnabled = !GameManager.isEnabled();
+			// });
+
 			this._instance = new Menu({
 				menuOptions: [
 					startGameOption,
 					new MenuOption({
 						label: 'Wznów grę',
-						//@ts-expect-error todo make valid typings
-						dependsOn: GameManager,
+						// Opcja widoczna tylko gdy gra jest włączona
+						onRender: (option) => {
+							option.isEnabled = MainManager.instance.gameState === GameState.IN_GAME;
+						},
 						action: () => {
 							PauseMenu.instance.exitMenu();
 						}
@@ -43,19 +47,16 @@ export class PauseMenu {
 					}),
 					new MenuOption({
 						label: 'Wyjdź z gry',
-						//@ts-expect-error todo make valid typings
-						dependsOn: GameManager,
+						// Opcja widoczna tylko gdy gra jest włączona
+						onRender: (option) => {
+							option.isEnabled = MainManager.instance.gameState === GameState.IN_GAME;
+						},
 						action: () => {
-							MainManager.instance.stopGame();
+							MainManager.instance?.stopGame();
 							PauseMenu.instance.closeMenu();
+							MenuManager.instance._closeActiveMenu();
 						}
 					})
-					// { label: 'Osiągnięcia', action: () => console.log('Osiągnięcia clicked') },
-					// { label: 'Zapisz i wyjdź', action: () => console.log('Zapisz i wyjdź clicked') },
-					// {
-					// 	label: 'Wyjdź bez zapisywania',
-					// 	action: () => console.log('Wyjdź bez zapisywania clicked')
-					// }
 				],
 				onMenuExit: () => {
 					this.instance.gameManager?.gameControlsManager.enterPointerLock();

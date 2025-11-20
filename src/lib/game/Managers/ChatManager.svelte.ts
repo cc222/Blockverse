@@ -1,17 +1,16 @@
 import { BaseManager } from './BaseManager';
-import { GameManager } from './GameManger';
+import type { GameManager } from './GameManger.svelte';
 
 export class ChatManager extends BaseManager {
 	messages: string[] = $state<string[]>([]);
-	isEnabled: boolean = $state(false);
 
 	constructor(private gameManager: GameManager) {
 		super();
-		this.isEnabled = true;
+		this.messages = [];
 	}
 
-	protected async onDestroy(): Promise<void> {
-		this.isEnabled = false;
+	public async onDisable(): Promise<void> {
+		this.messages = [];
 	}
 
 	addMessage(text: string) {

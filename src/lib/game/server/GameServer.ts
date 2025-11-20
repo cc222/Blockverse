@@ -1,16 +1,10 @@
-import { GameManager } from '../Managers/GameManger';
+import { GameManager } from '../Managers/GameManger.svelte';
 import type { RpcTransport } from './Transport/RpcTransport';
 
 export class GameServer {
 	players: Map<string, RpcTransport> = new Map();
 
-	gameManager!: GameManager;
-
-	constructor() {
-		GameManager.afterInitialization((instance) => {
-			this.gameManager = instance;
-		});
-	}
+	constructor(private gameManager: GameManager) {}
 
 	broadcast(exceptPlayerId: string | null, method: string, args: unknown[], unreliable = false) {
 		for (const [id, transport] of this.players) {

@@ -98,10 +98,6 @@ export class PlayerManager extends BaseManager {
 	public setPosition(x: number, y: number, z: number) {
 		this.camera.position.set(x, y, z);
 	}
-
-	public dispose() {
-		this.controls.dispose();
-	}
 }
 
 export type HitResult = {

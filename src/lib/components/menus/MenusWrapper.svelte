@@ -3,12 +3,11 @@
 	import { MenuManager } from '../../game/Managers/MenuManager.svelte';
 	import { onMount } from 'svelte';
 
-	let menuManager: MenuManager;
-	onMount(async () => {
-		MenuManager.afterInitialization((instance) => {
-			menuManager = instance;
-		});
-	});
+	let {
+		menuManager
+	}: {
+		menuManager: MenuManager;
+	} = $props();
 </script>
 
 <!-- Renderuj tylko aktywne menu -->

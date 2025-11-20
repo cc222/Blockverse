@@ -3,7 +3,7 @@ import { CHUNK_SIZE, HALO } from '$lib/game/GameConsts';
 import * as THREE from 'three';
 import { WorldManager } from '../WorldManager';
 import type { MeshData } from './MeshData';
-import { GameManager } from '$lib/game/Managers/GameManger';
+import { GameManager } from '$lib/game/Managers/GameManger.svelte';
 
 export class Chunk {
 	//TODO: add cashed borders voxels for meshing optimization

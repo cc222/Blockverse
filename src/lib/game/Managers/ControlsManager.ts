@@ -1,7 +1,7 @@
 import { Debug } from '$lib/debug/Debug';
 import { DebugType } from '$lib/debug/DebugType';
 import { DebugLevel } from '$lib/debug/DebugLevel';
-import { BaseManagerAndEventEmitter } from './BaseManagerAndEventEmiter';
+import { BaseManagerAndEventEmiter } from './BaseManagerAndEventEmiter';
 
 type EventsNames =
 	| 'forwardKeyUp'
@@ -29,7 +29,7 @@ type Events = {
 	[K in EventsNames]: { type: K };
 };
 
-export class ControlsManager extends BaseManagerAndEventEmitter<Events> {
+export class ControlsManager extends BaseManagerAndEventEmiter<Events> {
 	constructor() {
 		super();
 		this.initListeners();

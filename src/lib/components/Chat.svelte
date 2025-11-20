@@ -2,9 +2,14 @@
 	import { ChatManager } from '$lib/game/Managers/ChatManager.svelte';
 	import { onDestroy, onMount } from 'svelte';
 
-	let chatManager: ChatManager;
-	let inputRef: HTMLInputElement;
-	let input = '';
+	let inputRef: HTMLInputElement | undefined = $state(undefined);
+	let input = $state('');
+
+	let {
+		chatManager
+	}: {
+		chatManager: ChatManager;
+	} = $props();
 
 	const sendMessage = () => {
 		if (!input.trim() || !chatManager) return;
@@ -18,18 +23,18 @@
 
 	//TODO: make it in controlsManager
 	const handleKeyDown = (event: KeyboardEvent) => {
-		if (event.key === 't' || event.key === '/') {
-			//event.preventDefault();
-			focusChat();
-		}
+		if (chatManager?.isEnabled)
+			if (event.key === 't' || event.key === '/') {
+				//event.preventDefault();
+				focusChat();
+			}
 	};
 
-	ChatManager.afterInitialization((chatManagerInstance) => {
-		chatManager = chatManagerInstance;
+	onMount(() => {
 		window.addEventListener('keydown', handleKeyDown);
 	});
 
-	ChatManager.onDestroy(() => {
+	onDestroy(() => {
 		window.removeEventListener('keydown', handleKeyDown);
 	});
 </script>
@@ -47,9 +52,9 @@
 				type="text"
 				bind:value={input}
 				placeholder="Napisz wiadomość..."
-				on:keydown={(e) => e.key === 'Enter' && sendMessage()}
+				onkeydown={(e) => e.key === 'Enter' && sendMessage()}
 			/>
-			<button on:click={sendMessage}>Wyślij</button>
+			<button onclick={sendMessage}>Wyślij</button>
 		</div>
 	</div>
 {/if}

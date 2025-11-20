@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { BaseManager } from './BaseManager';
 
-export abstract class BaseManagerAndEventEmitter<
+export abstract class BaseManagerAndEventEmiter<
 	T extends Record<string, any> = Record<string, any>
 > extends BaseManager {
 	private _dispatcher = new THREE.EventDispatcher();

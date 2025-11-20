@@ -11,30 +11,23 @@ export interface BlockUserData {
 }
 
 export class MainMenuManager extends BaseManager {
-	public isEnabled: boolean = $state(false);
 	private animationId: number | null = null;
 	private blocks: THREE.Mesh[] = [];
 
 	constructor(private threeManager: ThreeManager) {
 		super();
-		this.enable();
+		this.showMenu();
 	}
 
-	enable() {
-		this.isEnabled = true;
+	private async showMenu() {
 		this.setupSceneForMainMenu();
 		this.animate();
 	}
 
-	disable() {
-		this.isEnabled = false;
+	async onDestroy() {
 		if (this.animationId !== null) {
 			cancelAnimationFrame(this.animationId);
 		}
-	}
-
-	protected async onDestroy(): Promise<void> {
-		this.disable();
 	}
 
 	private setupSceneForMainMenu() {
